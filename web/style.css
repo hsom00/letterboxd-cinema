@@ -29,7 +29,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .views button { padding: 6px 0; font-size: 12.5px; font-weight: 400; letter-spacing: .02em; color: var(--ink-3); border-bottom: 1px solid transparent; transition: color .2s, border-color .2s; }
 .views button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink-2); }
 .views button:hover:not([aria-pressed="true"]) { color: var(--ink-2); }
-.right { display: flex; align-items: center; gap: 18px; }
+.right { display: flex; align-items: center; gap: 24px; }
 .menu-wrap { position: relative; }
 .country-btn { font-size: 12.5px; color: var(--ink-3); padding: 6px 0; border-bottom: 1px solid transparent; transition: color .2s, border-color .2s; }
 .country-btn:hover, .country-btn[aria-expanded="true"] { color: var(--ink); }
@@ -42,9 +42,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .countries button[aria-pressed="true"]::before { content: "· "; }
 .eyebrow button { font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; border-bottom: 1px solid transparent; }
 .eyebrow button:hover { color: var(--ink); border-bottom-color: var(--ink-3); }
-.pick { display: inline-flex; align-items: center; gap: 9px; padding: 8px 14px 8px 12px; border: 1px solid var(--rule); border-radius: 6px; font-size: 12.5px; font-weight: 400; transition: border-color .2s; }
-.pick:hover { border-color: var(--ink-2); }
-.pick svg { width: 14px; height: 14px; }
 .me { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--rule); font-family: var(--display); font-size: 13px; color: var(--ink-2); display: grid; place-items: center; }
 .me:hover { color: var(--ink); border-color: var(--ink-2); }
 .menu { position: fixed; top: 64px; right: 40px; z-index: 11; display: grid; min-width: 160px; background: #141414; border: 1px solid var(--rule); border-radius: 6px; padding: 6px; }
@@ -173,7 +170,6 @@ body[data-view="grid"] .reel { display: none; }
   .bar, .library, .film .body { padding-left: 20px; padding-right: 20px; }
   .bar { padding-top: 16px; }
   .right { gap: 14px; }
-  .pick .txt { display: none; } .pick { padding: 9px 11px; }
   .menu { right: 20px; }
   .foot-row { grid-template-columns: 1fr; gap: 22px; padding: 0 20px 44px; }
   .controls { justify-items: start; gap: 12px; }

@@ -18,14 +18,14 @@ Under the hood it's Jellyfin, Radarr, Prowlarr and Transmission, pre-wired so yo
 git clone https://github.com/hsom00/letterboxd-cinema
 cd letterboxd-cinema
 .\scripts\install.ps1        # Windows
-bash scripts/install.sh      # macOS / Linux
+./scripts/install.sh         # macOS / Linux
 ```
 
 The installer asks about the machine — folders, timezone, LAN or public, GPU, ports — writes `.env`, pre-seeds every service's settings, and starts the stack. First start pulls the images and takes a few minutes.
 
 Then open `http://localhost`. Your first visit is a short onboarding in the cinema's own design: name it, create your account, give your Letterboxd username, choose where films may come from. On "Set up my cinema" everything is wired together over the services' APIs — Jellyfin account and Movies library, Radarr to Transmission with hard-linking and a size ceiling per quality, Prowlarr to Radarr, your watchlist as the shopping list — and you sign in. Nothing else to configure; the projection booth (Radarr, Prowlarr, Transmission at `localhost:7878`, `:9696`, `:9091`) is there if you ever want it, reachable only from the machine itself.
 
-Anything you add to your Letterboxd watchlist turns up in the cinema. Admins get a **Settings** pane from the account menu: look for new films now, pull the watchlist now, see what's downloading, switch sources on and off or add more, rename the cinema, and links into the projection booth.
+Anything you add to your Letterboxd watchlist turns up in the cinema.
 
 ## Remote access
 
@@ -54,9 +54,8 @@ scripts/                    installers
 
 ## Roadmap
 
-- **Installer, properly.** The two shell scripts are a stopgap and have already bitten twice. Replace them with one cross-platform installer (Python, or a tiny Go binary) that: checks Docker is running and ports 80/443 are free before asking anything, expands `~`, validates paths and timezone, warns about disk space, can be re-run safely, supports a non-interactive mode for scripted installs, and prints a clear "what next" at the end. Consider moving the machine questions into the browser too, leaving the installer with nothing to ask.
-
-- Intel / AMD transcoding overlays; pinned image versions and a release cadence.
+- **Playback on modest machines.** Without a GPU, transcoding falls to the CPU: a laptop copes with one 1080p stream and struggles with 4K or HEVC. To do: Intel QSV and AMD VAAPI overlays alongside the NVIDIA one; a sensible default streaming bitrate on the client (with an "original quality" option) so remote viewing doesn't ask for 120 Mbps; prefer direct play by detecting what the browser can decode (HEVC in Safari, AV1 in Chrome) before transcoding; optionally pre-transcode films to an H.264 1080p sidecar overnight so playback never depends on the CPU at showtime. Docker on macOS has no access to the Mac's video hardware, so a Mac host would need Jellyfin running natively to use VideoToolbox — worth documenting.
+- Pinned image versions and a release cadence.
 
 ## Licence
 
