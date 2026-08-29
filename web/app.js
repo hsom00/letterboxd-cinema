@@ -295,7 +295,7 @@ async function runSetup() {
     if (!r.ok) throw new Error(d.error || r.statusText);
     log.innerHTML = (d.log || []).map(l => `<li>${esc(l)}</li>`).join('') + '<li>Done.</li>';
     const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = 'Enter'; b.style.marginTop = '10px';
-    b.onclick = () => { $('#setup').hidden = true; $('#login').hidden = false; $('#login-form').user.value = wizard.data.admin_user; $('#login-form').pass.focus(); loadConfig(); };
+    b.onclick = () => { $('#setup').hidden = true; document.body.dataset.view = 'login'; $('#login').hidden = false; $('#login-form').user.value = wizard.data.admin_user; $('#login-form').pass.focus(); loadConfig(); };
     $('#setup-form').appendChild(b); b.focus();
   } catch (e) { log.innerHTML = `<li>Something went wrong: ${esc(e.message)}</li>`; $('#setup-back').hidden = false; }
 }
@@ -316,8 +316,8 @@ $('#setup-back').onclick = () => showStep(Math.max(1, wizard.step - 1));
 async function start() {
   document.documentElement.style.setProperty('--grain', makeGrain());
   await loadConfig();
-  if (config.setup) { $('#setup').hidden = false; showStep(1); return; }
-  if (!session) { $('#login').hidden = false; return; }
+  if (config.setup) { document.body.dataset.view = 'setup'; $('#setup').hidden = false; showStep(1); return; }
+  if (!session) { document.body.dataset.view = 'login'; $('#login').hidden = false; return; }
   $('#bar').hidden = false; $('#me').textContent = session.userName[0].toUpperCase();
   api('/Users/Me').then(me => { session.admin = !!me?.Policy?.IsAdministrator; }).catch(() => {});
   $('#reel').innerHTML = `<div class="loading">Loading</div>`;

@@ -91,6 +91,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* ---------- heroic panels ---------- */
 .reel { height: 100vh; height: 100svh; overflow-y: auto; scroll-snap-type: y mandatory; overscroll-behavior-y: contain; scrollbar-width: none; }
+body[data-view="setup"] .reel, body[data-view="login"] .reel, body[data-view="setup"] .library, body[data-view="login"] .library { display: none; }
 .reel::-webkit-scrollbar { display: none; }
 .panel { position: relative; height: 100vh; height: 100svh; scroll-snap-align: start; scroll-snap-stop: always; display: grid; align-items: end; isolation: isolate; overflow: hidden; }
 .still { position: absolute; inset: 0; z-index: -2; background-size: cover; background-position: center 30%; transform: scale(1.02); background-color: #161616; }

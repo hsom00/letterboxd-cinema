@@ -141,6 +141,9 @@ def prowlarr_public_indexers():
         if s.get("privacy") != "public": continue
         cats = [c.get("id", 0) for c in (s.get("capabilities") or {}).get("categories", [])]
         if not any(2000 <= c < 3000 for c in cats): continue
+        text = f"{s.get('name', '')} {s.get('description', '')}".lower()
+        if "anime" in text or "hentai" in text: continue           # not much use for a film library
+        if (s.get("language") or "en-US") != "en-US": continue     # keep the list to English-language trackers by default
         out.append({"id": s.get("definitionName"), "name": s.get("name"), "description": (s.get("description") or "")[:120], "language": s.get("language")})
     return sorted(out, key=lambda x: (x["name"] or "").lower())
 
@@ -165,7 +168,13 @@ def prowlarr(indexers):
             for f in d.get("fields", []):
                 if f.get("name") == "torrentBaseSettings.seedRatio" and SEED_RATIO: f["value"] = float(SEED_RATIO)
                 if f.get("name") == "torrentBaseSettings.seedTime" and SEED_TIME: f["value"] = int(SEED_TIME)
-            code, r = call("POST", f"{PROWLARR}/api/v1/indexer", d, H); log(f"Prowlarr: source {d['name']}", "ok" if code < 300 else f"{code} {str(r)[:160]}")
+            code, r = call("POST", f"{PROWLARR}/api/v1/indexer", d, H)
+            if code < 300: log(f"Prowlarr: source {d['name']}", "ok"); continue
+            # Prowlarr tests a source before saving; public trackers come and go. Keep it, but switched off, so it can be enabled later.
+            why = "blocked by Cloudflare" if "cloudflare" in str(r).lower() else "unreachable right now"
+            d["enable"] = False
+            code2, _ = call("POST", f"{PROWLARR}/api/v1/indexer?forceSave=true", d, H)
+            log(f"Prowlarr: source {d['name']}", f"{why} — added but switched off" if code2 < 300 else f"{why} — skipped")
     call("POST", f"{PROWLARR}/api/v1/command", {"name": "ApplicationIndexerSync"}, H)
 
 # ------------------------------------------------------------------ Jellyfin
