@@ -26,9 +26,8 @@ if ($mode -eq 'public') {
 }
 $gpu = Ask "GPU for transcoding: 'nvidia' or 'none'" "none"
 $httpPort = Ask "Web port (80 unless something else is using it)" "80"
-$httpsPort = if ($httpPort -eq '80') { '443' } else { Ask "HTTPS port" "8443" }
-$peerPort = Ask "Torrent peer port" "51413"
-$discPort = if ($httpPort -eq '80') { '7359' } else { Ask "Jellyfin discovery port (UDP)" "7360" }
+if ($httpPort -eq '80') { $httpsPort = '443'; $discPort = '7359'; $peerPort = '51413' }
+else { $httpsPort = Ask "HTTPS port" "8443"; $discPort = Ask "Jellyfin discovery port (UDP)" "7360"; $peerPort = Ask "Torrent peer port" "51414" }
 
 $radarrKey = NewKey; $prowlarrKey = NewKey
 

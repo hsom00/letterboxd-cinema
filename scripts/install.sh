@@ -21,8 +21,8 @@ if [ "$mode" = public ]; then
 fi
 gpu=$(ask "GPU for transcoding: 'nvidia' or 'none'" "none")
 http_port=$(ask "Web port (80 unless something else is using it)" "80")
-if [ "$http_port" = 80 ]; then https_port=443; disc_port=7359; else https_port=$(ask "HTTPS port" "8443"); disc_port=$(ask "Jellyfin discovery port (UDP)" "7360"); fi
-peer_port=$(ask "Torrent peer port" "51413")
+if [ "$http_port" = 80 ]; then https_port=443; disc_port=7359; peer_port=51413
+else https_port=$(ask "HTTPS port" "8443"); disc_port=$(ask "Jellyfin discovery port (UDP)" "7360"); peer_port=$(ask "Torrent peer port" "51414"); fi
 radarr_key=$(newkey); prowlarr_key=$(newkey)
 
 mkdir -p "$media"/{movies,downloads/complete,downloads/incomplete} \
