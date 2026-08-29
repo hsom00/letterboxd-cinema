@@ -7,12 +7,19 @@ ask() { local v; read -r -p "$1${2:+ [$2]}: " v; echo "${v:-$2}"; }
 newkey() { head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
 
 command -v docker >/dev/null || { echo "Docker is not installed. Install Docker (Engine or Desktop), then re-run."; exit 1; }
+docker info >/dev/null 2>&1 || { echo "Docker is installed but not running. Start Docker Desktop (or the docker service), wait for it to settle, then re-run."; exit 1; }
 [ -f .env ] && { echo ".env already exists — delete it to start over, or edit it directly."; exit 1; }
 
 echo; echo "  Letterboxd Cinema — setup"; echo
 media=$(ask "Folder for films and downloads (will get movies/ and downloads/ inside)" "$HOME/media")
 config=$(ask "Folder for app settings and databases" "$HOME/cinema/config")
-tz=$(ask "Timezone" "$( (readlink /etc/localtime 2>/dev/null | sed 's|.*/zoneinfo/||') || echo Europe/London)")
+media="${media/#\~/$HOME}"; config="${config/#\~/$HOME}"
+[ "$media" = "$config" ] && { config="$media/.config"; echo "  (settings will go in $config so they stay out of the way of the films)"; }
+default_tz=$( (readlink /etc/localtime 2>/dev/null | sed 's|.*/zoneinfo/||') || true ); default_tz=${default_tz:-Europe/London}
+while :; do
+  tz=$(ask "Timezone (Region/City, e.g. Europe/London)" "$default_tz")
+  case "$tz" in */*) break ;; *) echo "  That's not a timezone name — it looks like 'Europe/London' or 'America/New_York'." ;; esac
+done
 mode=$(ask "Access: 'lan' (this network only) or 'public' (your own domain, HTTPS)" "lan")
 site=":80"; cf=""
 if [ "$mode" = public ]; then
@@ -40,8 +47,8 @@ if [ "$gpu" = nvidia ] && [ ! -f "$config/jellyfin/config/encoding.xml" ]; then 
   echo "RADARR_API_KEY=$radarr_key"; echo "PROWLARR_API_KEY=$prowlarr_key"
   echo "HTTP_PORT=$http_port"; echo "HTTPS_PORT=$https_port"; echo "PEER_PORT=$peer_port"; echo "DISCOVERY_PORT=$disc_port"
   echo "MAX_MB_PER_MINUTE=150"; echo "SEED_RATIO=1.0"
-  [ "$mode" = public ] && { echo "COMPOSE_PROFILES=public"; echo "CLOUDFLARE_API_TOKEN=$cf"; }
-  [ "$gpu" = nvidia ] && echo "COMPOSE_FILE=docker-compose.yml:docker-compose.nvidia.yml"
+  if [ "$mode" = public ]; then echo "COMPOSE_PROFILES=public"; echo "CLOUDFLARE_API_TOKEN=$cf"; fi
+  if [ "$gpu" = nvidia ]; then echo "COMPOSE_FILE=docker-compose.yml:docker-compose.nvidia.yml"; fi
 } > .env
 
 echo; echo "Starting…"

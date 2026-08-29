@@ -10,6 +10,7 @@ function Ask($prompt, $default) {
 function NewKey { -join ((1..32) | ForEach-Object { '0123456789abcdef'[(Get-Random -Maximum 16)] }) }
 
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { Write-Host "Docker Desktop is not installed (or not on PATH). Install it from docker.com, then re-run."; exit 1 }
+docker info *> $null; if ($LASTEXITCODE -ne 0) { Write-Host "Docker Desktop is installed but not running. Start it, wait for the whale to settle, then re-run."; exit 1 }
 if (Test-Path .env) { Write-Host ".env already exists — delete it to start over, or edit it directly."; exit 1 }
 
 Write-Host ""
@@ -17,7 +18,8 @@ Write-Host "  Letterboxd Cinema — setup" -ForegroundColor White
 Write-Host ""
 $media  = (Ask "Folder for films and downloads (will get movies\ and downloads\ inside)" "D:\Media") -replace '\\','/'
 $config = (Ask "Folder for app settings and databases" "D:\Cinema\config") -replace '\\','/'
-$tz     = Ask "Timezone" ((Get-TimeZone).Id -replace ' ', '_' | ForEach-Object { if ($_ -match '^[A-Za-z]+/[A-Za-z_]+$') { $_ } else { 'Europe/London' } })
+if ($media -eq $config) { $config = "$media/.config"; Write-Host "  (settings will go in $config so they stay out of the way of the films)" }
+do { $tz = Ask "Timezone (Region/City, e.g. Europe/London)" "Europe/London"; if ($tz -notmatch '/') { Write-Host "  That's not a timezone name — it looks like 'Europe/London' or 'America/New_York'." } } until ($tz -match '/')
 $mode   = Ask "Access: 'lan' (this network only) or 'public' (your own domain, HTTPS)" "lan"
 $site = ':80'; $cf = ''
 if ($mode -eq 'public') {
