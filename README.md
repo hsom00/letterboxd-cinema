@@ -21,16 +21,13 @@ cd letterboxd-cinema
 ./scripts/install.sh         # macOS / Linux
 ```
 
-The installer asks six questions (name, folders, timezone, LAN or public, GPU), writes `.env`, pre-seeds every service's settings, and starts the stack. First start pulls the images and takes a few minutes.
+The installer asks a few questions — name, folders, timezone, LAN or public, GPU, the account you'll sign in with, your Letterboxd username — writes `.env`, pre-seeds every service's settings, and starts the stack. First start pulls the images and takes a few minutes.
 
-Then, once only:
+A provisioner then runs in the background and does the rest over the services' APIs: creates your Jellyfin account and Movies library (with several backdrops per film), wires Radarr to Transmission with hard-linking, sensible naming, a size ceiling per quality and no remuxes, links Prowlarr to Radarr, tells Radarr to nudge Jellyfin when a film lands, and turns your Letterboxd watchlist into Radarr's shopping list. `docker compose logs provision` shows what it did; it's safe to run again at any time.
 
-1. Open `http://localhost/web/` and complete Jellyfin's short wizard: create your admin account and add a **Movies** library pointing at `/data/movies`.
-2. Open `http://localhost` and sign in with that account. That's your cinema.
+Open `http://localhost` and sign in. That's your cinema. Anything you add to your Letterboxd watchlist turns up in it.
 
-Adding films: in Radarr (`http://localhost:7878`) → Settings → Import Lists → Custom List, with a URL like `http://letterboxd-list:5000/<your-letterboxd-user>/watchlist/`. Anything you add on Letterboxd turns up in the cinema. Radarr, Prowlarr and Transmission are only reachable from the machine itself; the cinema is what you share.
-
-> Steps 1 and the import-list setup are exactly what the upcoming provisioner and onboarding flow will do for you. They're on the roadmap below.
+The one thing it can't do for you is choose where films come from: add indexers in Prowlarr (`http://localhost:9696`) or list public ones in `DEFAULT_INDEXERS` in `.env` before first start. Radarr, Prowlarr and Transmission are only reachable from the machine itself; the cinema is what you share.
 
 ## Remote access
 
@@ -46,6 +43,7 @@ docker-compose.nvidia.yml   overlay: NVIDIA transcoding for Jellyfin
 caddy/Caddyfile             routing: / and /app/* are the cinema, everything else Jellyfin
 web/                        the front-end (plain HTML/CSS/JS, no build step)
 helper/                     tiny Python service: Letterboxd ratings & countries, app config, admin actions
+provision/                  one-shot container that configures Radarr, Prowlarr and Jellyfin over their APIs
 config/                     pre-seeded settings the installer copies into place
 scripts/                    installers
 ```
@@ -58,7 +56,6 @@ scripts/                    installers
 
 ## Roadmap
 
-- **Provisioner**: a one-shot container that configures Radarr, Prowlarr, Transmission and Jellyfin over their APIs on first start (download client, root folder, quality caps, seed limits, Jellyfin admin + library, backdrop limit), so the "once only" steps above disappear.
 - **Onboarding**: a first-run wizard in the cinema's own design — name, admin account, Letterboxd username — replacing Jellyfin's.
 - Intel / AMD transcoding overlays; pinned image versions and a release cadence.
 

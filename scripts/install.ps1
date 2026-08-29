@@ -26,6 +26,9 @@ if ($mode -eq 'public') {
   $cf   = Ask "Cloudflare API token with 'Edit zone DNS' for that domain" ""
 }
 $gpu = Ask "GPU for transcoding: 'nvidia' or 'none'" "none"
+$admin = Ask "Username for your account" "$env:USERNAME"
+$pass  = Ask "Password for that account" ""
+$lb    = Ask "Your Letterboxd username (optional — your watchlist becomes the shopping list)" ""
 
 $radarrKey = NewKey; $prowlarrKey = NewKey
 
@@ -54,7 +57,8 @@ if ($gpu -eq 'nvidia' -and -not (Test-Path "$config/jellyfin/config/encoding.xml
 # ---- .env
 $env = @(
   "APP_NAME=$name", "MEDIA_PATH=$media", "CONFIG_PATH=$config", "TZ=$tz", "PUID=1000", "PGID=1000",
-  "SITE_ADDRESS=$site", "RADARR_API_KEY=$radarrKey", "PROWLARR_API_KEY=$prowlarrKey"
+  "SITE_ADDRESS=$site", "RADARR_API_KEY=$radarrKey", "PROWLARR_API_KEY=$prowlarrKey",
+  "JELLYFIN_ADMIN_USER=$admin", "JELLYFIN_ADMIN_PASSWORD=$pass", "LETTERBOXD_USER=$lb", "DEFAULT_INDEXERS=", "MAX_MB_PER_MINUTE=150", "SEED_RATIO=1.0"
 )
 if ($mode -eq 'public') { $env += "COMPOSE_PROFILES=public"; $env += "CLOUDFLARE_API_TOKEN=$cf" }
 if ($gpu -eq 'nvidia')  { $env += "COMPOSE_FILE=docker-compose.yml:docker-compose.nvidia.yml" }
@@ -66,4 +70,4 @@ docker compose up -d --build
 Write-Host ""
 if ($mode -eq 'public') { Write-Host "Done. Forward TCP 80 and 443 on your router to this PC, then open https://$site" }
 else { Write-Host "Done. Open http://localhost (or http://<this PC's IP> from another device on your network)." }
-Write-Host "First visit: sign in with the Jellyfin admin account you create at http://localhost:8096 (one-time wizard)."
+Write-Host "Sign in with the account you just chose. Setup finishes in the background — 'docker compose logs provision' shows it."

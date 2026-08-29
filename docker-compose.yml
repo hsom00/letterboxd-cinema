@@ -116,6 +116,16 @@ services:
       - "443:443"
       - "443:443/udp"
 
+  # One-shot: configures Radarr, Prowlarr and Jellyfin over their APIs on every `up` (safe to re-run)
+  provision:
+    build: ./provision
+    container_name: provision
+    env_file: .env
+    volumes:
+      - ${CONFIG_PATH}/helper:/data
+    depends_on: [radarr, prowlarr, jellyfin, transmission, letterboxd-list]
+    restart: "no"
+
   # ---------- upkeep ----------
   ddns:
     restart: unless-stopped
