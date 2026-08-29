@@ -56,6 +56,7 @@ scripts/                    installers
 
 - **Installer, properly.** The two shell scripts are a stopgap and have already bitten twice. Replace them with one cross-platform installer (Python, or a tiny Go binary) that: checks Docker is running and ports 80/443 are free before asking anything, expands `~`, validates paths and timezone, warns about disk space, can be re-run safely, supports a non-interactive mode for scripted installs, and prints a clear "what next" at the end. Consider moving the machine questions into the browser too, leaving the installer with nothing to ask.
 
+- **Settings pane** (admins), in the cinema's design: force a library scan, pull the Letterboxd watchlist now, see what's downloading, rename the cinema, manage sources, links into the projection booth. The "Look for new films" menu item is the first sliver of this.
 - Intel / AMD transcoding overlays; pinned image versions and a release cadence.
 
 ## Licence
