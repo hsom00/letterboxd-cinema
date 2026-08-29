@@ -87,4 +87,4 @@ appdata/                    (created by the installer, not in git) every service
 
 ## Licence
 
-MIT. Not affiliated with Letterboxd; it just loves it.
+MIT for everything in this repository. The projects it runs are listed with their licences in [THIRD_PARTY.md](THIRD_PARTY.md). Not affiliated with Letterboxd or TMDB; it just loves them.
