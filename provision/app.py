@@ -199,11 +199,24 @@ def jellyfin(admin_user, admin_pass):
     code, auth = call("POST", f"{JELLYFIN}/Users/AuthenticateByName", {"Username": admin_user, "Pw": admin_pass}, H)
     if code != 200: log(f"Jellyfin: could not sign in as {admin_user} — library not checked"); return None
     T = {"X-Emby-Token": auth["AccessToken"]}
+    # Library options: which providers to ask (silence here means "none" to Jellyfin), how many backdrops to keep.
+    META, IMAGES = ["TheMovieDb", "The Open Movie Database"], ["TheMovieDb", "The Open Movie Database", "Screen Grabber"]
+    type_opts = [{"Type": "Movie", "MetadataFetchers": META, "MetadataFetcherOrder": META, "ImageFetchers": IMAGES, "ImageFetcherOrder": IMAGES,
+                  "ImageOptions": [{"Type": "Backdrop", "Limit": 5, "MinWidth": 1280}, {"Type": "Primary", "Limit": 1, "MinWidth": 0}]}]
+    opts = {"EnableRealtimeMonitor": True, "PathInfos": [{"Path": "/data/movies"}], "MetadataCountryCode": "GB", "PreferredMetadataLanguage": "en",
+            "EnableInternetProviders": True, "SaveLocalMetadata": False, "AutomaticRefreshIntervalDays": 30, "TypeOptions": type_opts}
     _, libs = call("GET", f"{JELLYFIN}/Library/VirtualFolders", headers=T)
-    if not any("/data/movies" in (l.get("Locations") or []) for l in (libs if isinstance(libs, list) else [])):
-        body = {"LibraryOptions": {"EnableRealtimeMonitor": True, "PathInfos": [{"Path": "/data/movies"}], "MetadataCountryCode": "GB", "PreferredMetadataLanguage": "en",
-                "TypeOptions": [{"Type": "Movie", "ImageOptions": [{"Type": "Backdrop", "Limit": 5, "MinWidth": 1280}, {"Type": "Primary", "Limit": 1, "MinWidth": 0}]}]}}
-        code, _ = call("POST", f"{JELLYFIN}/Library/VirtualFolders?name=Movies&collectionType=movies&refreshLibrary=true", body, T); log("Jellyfin: Movies library", "ok" if code < 300 else code)
+    lib = next((l for l in (libs if isinstance(libs, list) else []) if "/data/movies" in (l.get("Locations") or [])), None)
+    if not lib:
+        code, _ = call("POST", f"{JELLYFIN}/Library/VirtualFolders?name=Movies&collectionType=movies&refreshLibrary=true", {"LibraryOptions": opts}, T); log("Jellyfin: Movies library", "ok" if code < 300 else code)
+    else:
+        have = (lib.get("LibraryOptions") or {}).get("TypeOptions") or []
+        fetchers = next((t.get("MetadataFetchers") for t in have if t.get("Type") == "Movie"), None)
+        if not fetchers:
+            code, _ = call("POST", f"{JELLYFIN}/Library/VirtualFolders/LibraryOptions", {"Id": lib.get("ItemId"), "LibraryOptions": opts}, T)
+            log("Jellyfin: metadata providers", "ok" if code < 300 else code)
+            call("POST", f"{JELLYFIN}/Items/{lib.get('ItemId')}/Refresh?Recursive=true&MetadataRefreshMode=FullRefresh&ImageRefreshMode=FullRefresh&ReplaceAllMetadata=true&ReplaceAllImages=true", headers=T)
+            log("Jellyfin: fetching details and stills for every film", "started")
     # Folder watching doesn't work through Docker Desktop's file sharing, so scan on a short timer instead
     _, tasks = call("GET", f"{JELLYFIN}/ScheduledTasks", headers=T)
     scan = next((t for t in (tasks if isinstance(tasks, list) else []) if t.get("Key") == "RefreshLibrary"), None)
