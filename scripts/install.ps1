@@ -4,8 +4,11 @@ $ErrorActionPreference = 'Stop'
 Set-Location (Join-Path $PSScriptRoot '..')
 
 function Ask($prompt, $default) {
-  $v = Read-Host "$prompt$(if ($default) { " [$default]" })"
-  if ([string]::IsNullOrWhiteSpace($v)) { $default } else { $v.Trim() }
+  $suffix = ''
+  if ($default) { $suffix = ' [' + $default + ']' }
+  $v = Read-Host ($prompt + $suffix)
+  if ([string]::IsNullOrWhiteSpace($v)) { return $default }
+  return $v.Trim()
 }
 function NewKey { -join ((1..32) | ForEach-Object { '0123456789abcdef'[(Get-Random -Maximum 16)] }) }
 
@@ -55,19 +58,19 @@ if (-not (Test-Path "$config/transmission/settings.json")) { Copy-Item config/tr
 if ($gpu -eq 'nvidia' -and -not (Test-Path "$config/jellyfin/config/encoding.xml")) { Copy-Item config/jellyfin-encoding-nvenc.xml "$config/jellyfin/config/encoding.xml" }
 
 # ---- .env
-$env = @(
+$lines = @(
   "APP_NAME=Cinema", "MEDIA_PATH=$media", "CONFIG_PATH=$config", "TZ=$tz", "PUID=1000", "PGID=1000",
   "SITE_ADDRESS=$site", "RADARR_API_KEY=$radarrKey", "PROWLARR_API_KEY=$prowlarrKey",
   "HTTP_PORT=$httpPort", "HTTPS_PORT=$httpsPort", "PEER_PORT=$peerPort", "DISCOVERY_PORT=$discPort", "MAX_MB_PER_MINUTE=150", "SEED_RATIO=1.0"
 )
-if ($mode -eq 'public') { $env += "COMPOSE_PROFILES=public"; $env += "CLOUDFLARE_API_TOKEN=$cf" }
-if ($gpu -eq 'nvidia')  { $env += "COMPOSE_FILE=docker-compose.yml:docker-compose.nvidia.yml" }
-$env -join "`n" | Set-Content -NoNewline .env
+if ($mode -eq 'public') { $lines += "COMPOSE_PROFILES=public"; $lines += "CLOUDFLARE_API_TOKEN=$cf" }
+if ($gpu -eq 'nvidia')  { $lines += "COMPOSE_FILE=docker-compose.yml:docker-compose.nvidia.yml" }
+[IO.File]::WriteAllText((Join-Path (Get-Location) '.env'), ($lines -join "`n"))
 
 Write-Host ""
 Write-Host "Starting…" -ForegroundColor White
 docker compose up -d
 Write-Host ""
 if ($mode -eq 'public') { Write-Host "Done. Forward TCP 80 and 443 on your router to this PC, then open https://$site" }
-else { Write-Host "Done. Open http://localhost$(if ($httpPort -ne '80') { ":$httpPort" }) (or this PC's IP from another device on your network)." }
+else { $u = 'http://localhost'; if ($httpPort -ne '80') { $u = $u + ':' + $httpPort }; Write-Host ('Done. Open ' + $u + " (or this PC's IP from another device on your network).") }
 Write-Host "Your first visit walks you through naming the cinema and creating your account."
