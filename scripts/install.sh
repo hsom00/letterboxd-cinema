@@ -36,7 +36,7 @@ if [ "$gpu" = nvidia ] && [ ! -f "$config/jellyfin/config/encoding.xml" ]; then 
 
 {
   echo "APP_NAME=Cinema"; echo "MEDIA_PATH=$media"; echo "CONFIG_PATH=$config"; echo "TZ=$tz"
-  echo "PUID=$(id -u)"; echo "PGID=$(id -g)"; echo "SITE_ADDRESS=$site"
+  echo "PUID=$(id -u)"; echo "PGID=$(id -g)"; echo "SITE_ADDRESS=$site"; echo "COMPOSE_PATH_SEPARATOR=:"
   echo "RADARR_API_KEY=$radarr_key"; echo "PROWLARR_API_KEY=$prowlarr_key"
   echo "HTTP_PORT=$http_port"; echo "HTTPS_PORT=$https_port"; echo "PEER_PORT=$peer_port"; echo "DISCOVERY_PORT=$disc_port"
   echo "MAX_MB_PER_MINUTE=150"; echo "SEED_RATIO=1.0"

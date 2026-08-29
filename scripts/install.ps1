@@ -60,7 +60,7 @@ if ($gpu -eq 'nvidia' -and -not (Test-Path "$config/jellyfin/config/encoding.xml
 # ---- .env
 $lines = @(
   "APP_NAME=Cinema", "MEDIA_PATH=$media", "CONFIG_PATH=$config", "TZ=$tz", "PUID=1000", "PGID=1000",
-  "SITE_ADDRESS=$site", "RADARR_API_KEY=$radarrKey", "PROWLARR_API_KEY=$prowlarrKey",
+  "SITE_ADDRESS=$site", "COMPOSE_PATH_SEPARATOR=:", "RADARR_API_KEY=$radarrKey", "PROWLARR_API_KEY=$prowlarrKey",
   "HTTP_PORT=$httpPort", "HTTPS_PORT=$httpsPort", "PEER_PORT=$peerPort", "DISCOVERY_PORT=$discPort", "MAX_MB_PER_MINUTE=150", "SEED_RATIO=1.0"
 )
 if ($mode -eq 'public') { $lines += "COMPOSE_PROFILES=public"; $lines += "CLOUDFLARE_API_TOKEN=$cf" }
