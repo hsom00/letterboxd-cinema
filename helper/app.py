@@ -140,6 +140,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path.rstrip("/") == "/api/setup":
             return self.onboard()
+        if self.path.rstrip("/") == "/api/admin/scan":
+            ok, _ = jellyfin_is_admin(self.headers.get("X-Jellyfin-Token", ""))
+            if not ok: return self.reply(403, {"error": "administrators only"})
+            try: http("POST", f"{JELLYFIN_URL}/Library/Refresh", headers={"X-Emby-Token": self.headers.get("X-Jellyfin-Token", "")})
+            except Exception as e: return self.reply(500, {"error": str(e)})
+            return self.reply(200, {"ok": True}, cache=False)
         m = re.fullmatch(r"/api/admin/remove/(\d+)/?", self.path)
         if not m: return self.reply(404, {"error": "unknown action"})
         token = self.headers.get("X-Jellyfin-Token", "")

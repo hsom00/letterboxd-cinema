@@ -204,6 +204,15 @@ def jellyfin(admin_user, admin_pass):
         body = {"LibraryOptions": {"EnableRealtimeMonitor": True, "PathInfos": [{"Path": "/data/movies"}], "MetadataCountryCode": "GB", "PreferredMetadataLanguage": "en",
                 "TypeOptions": [{"Type": "Movie", "ImageOptions": [{"Type": "Backdrop", "Limit": 5, "MinWidth": 1280}, {"Type": "Primary", "Limit": 1, "MinWidth": 0}]}]}}
         code, _ = call("POST", f"{JELLYFIN}/Library/VirtualFolders?name=Movies&collectionType=movies&refreshLibrary=true", body, T); log("Jellyfin: Movies library", "ok" if code < 300 else code)
+    # Folder watching doesn't work through Docker Desktop's file sharing, so scan on a short timer instead
+    _, tasks = call("GET", f"{JELLYFIN}/ScheduledTasks", headers=T)
+    scan = next((t for t in (tasks if isinstance(tasks, list) else []) if t.get("Key") == "RefreshLibrary"), None)
+    if scan:
+        fifteen = 15 * 60 * 10000000
+        if not any(tr.get("Type") == "IntervalTrigger" and tr.get("IntervalTicks") == fifteen for tr in scan.get("Triggers", [])):
+            code, _ = call("POST", f"{JELLYFIN}/ScheduledTasks/{scan['Id']}/Triggers", [{"Type": "IntervalTrigger", "IntervalTicks": fifteen}, {"Type": "StartupTrigger"}], T)
+            log("Jellyfin: scan for new films every 15 minutes", "ok" if code < 300 else code)
+    call("POST", f"{JELLYFIN}/Library/Refresh", headers=T)
     _, keys = call("GET", f"{JELLYFIN}/Auth/Keys", headers=T)
     find = lambda ks: next((k["AccessToken"] for k in (ks or {}).get("Items", []) if k.get("AppName") == "Radarr"), None) if isinstance(ks, dict) else None
     key = find(keys)

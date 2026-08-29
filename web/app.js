@@ -319,7 +319,7 @@ async function start() {
   if (config.setup) { document.body.dataset.view = 'setup'; $('#setup').hidden = false; showStep(1); return; }
   if (!session) { document.body.dataset.view = 'login'; $('#login').hidden = false; return; }
   $('#bar').hidden = false; $('#me').textContent = session.userName[0].toUpperCase();
-  api('/Users/Me').then(me => { session.admin = !!me?.Policy?.IsAdministrator; }).catch(() => {});
+  api('/Users/Me').then(me => { session.admin = !!me?.Policy?.IsAdministrator; $('#rescan').hidden = !session.admin; }).catch(() => {});
   $('#reel').innerHTML = `<div class="loading">Loading</div>`;
   try { films = await loadFilms(); } catch (e) { $('#reel').innerHTML = `<div class="loading">Could not load the library — ${esc(e.message)}</div>`; return; }
   if (!films.length) { $('#reel').innerHTML = `<div class="loading">No films yet</div>`; return; }
@@ -377,6 +377,11 @@ $('#sort').addEventListener('click', (e) => { const b = e.target.closest('[data-
 $('#me').onclick = () => { $('#menu').hidden = !$('#menu').hidden; };
 document.querySelectorAll('[data-start]').forEach(b => { b.setAttribute('aria-pressed', b.dataset.start === startMode); b.onclick = () => setStart(b.dataset.start); });
 $('#signout').onclick = signOut;
+$('#rescan').onclick = async () => {
+  const b = $('#rescan'); b.textContent = 'Looking…'; b.disabled = true;
+  try { await fetch('/api/admin/scan', { method: 'POST', headers: { 'X-Jellyfin-Token': session.token } }); } catch {}
+  setTimeout(async () => { try { films = await loadFilms(); renderReel(reelOrder()); if (view === 'grid') renderGrid(); prefetchMeta(); } catch {} b.textContent = 'Look for new films'; b.disabled = false; $('#menu').hidden = true; }, 20000);
+};
 document.addEventListener('click', (e) => {
   if (!e.target.closest('#menu, #me')) $('#menu').hidden = true;
   if (!e.target.closest('#countries, #country-btn')) { $('#countries').hidden = true; $('#country-btn').setAttribute('aria-expanded', 'false'); }
