@@ -8,7 +8,10 @@ newkey() { head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
 
 command -v docker >/dev/null || { echo "Docker is not installed. Install Docker (Engine or Desktop), then re-run."; exit 1; }
 docker info >/dev/null 2>&1 || { echo "Docker is installed but not running. Start Docker Desktop (or the docker service), wait for it to settle, then re-run."; exit 1; }
-[ -f .env ] && { echo ".env already exists — delete it to start over, or edit it directly."; exit 1; }
+if [ -f .env ]; then
+  echo "A .env from a previous run exists. Continuing will rewrite it (folders and settings already on disk are kept)."
+  read -r -p "Press Enter to continue, or Ctrl-C to stop: " _
+fi
 
 echo; echo "  Letterboxd Cinema — setup"; echo
 media=$(ask "Folder for films and downloads (will get movies/ and downloads/ inside)" "$HOME/media")
@@ -30,7 +33,10 @@ gpu=$(ask "GPU for transcoding: 'nvidia' or 'none'" "none")
 http_port=$(ask "Web port (80 unless something else is using it)" "80")
 if [ "$http_port" = 80 ]; then https_port=443; disc_port=7359; peer_port=51413
 else https_port=$(ask "HTTPS port" "8443"); disc_port=$(ask "Jellyfin discovery port (UDP)" "7360"); peer_port=$(ask "Torrent peer port" "51414"); fi
-radarr_key=$(newkey); prowlarr_key=$(newkey)
+# reuse keys already baked into an existing install, otherwise generate
+existing_key() { [ -f "$1" ] && sed -n 's|.*<ApiKey>\([^<]*\)</ApiKey>.*|\1|p' "$1" | head -1; }
+radarr_key=$(existing_key "$config/radarr/config.xml"); radarr_key=${radarr_key:-$(newkey)}
+prowlarr_key=$(existing_key "$config/prowlarr/config.xml"); prowlarr_key=${prowlarr_key:-$(newkey)}
 
 mkdir -p "$media"/{movies,downloads/complete,downloads/incomplete} \
          "$config"/{radarr,prowlarr,transmission,jellyfin/config,jellyfin-cache,helper,caddy/data,caddy/config}
