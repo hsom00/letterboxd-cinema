@@ -33,12 +33,20 @@ Choose `public` in the installer, give it a hostname you own on Cloudflare and a
 
 Prefer not to open ports? Stay on `lan` and use [Tailscale](https://tailscale.com) on the server and your laptop.
 
+## Updates
+
+Nothing to do. The stack's Watchtower checks weekly for new versions of everything — Jellyfin, Radarr and friends, and the cinema's own images, which GitHub builds and publishes whenever the `stable` branch moves. `CHANNEL=main` in `.env` follows every commit instead. The only change that needs a hand is one to `docker-compose.yml` itself: `git pull && docker compose up -d`.
+
+To work on the code, set `COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml` in `.env` and `docker compose up -d --build`; the front-end is then served straight from `web/` and edits show on refresh.
+
 ## Layout
 
 ```
 docker-compose.yml          the stack; every path and name comes from .env
 docker-compose.nvidia.yml   overlay: NVIDIA transcoding for Jellyfin
-caddy/Caddyfile             routing: / and /app/* are the cinema, everything else Jellyfin
+caddy/                      Caddyfile (routing: / and /app/* are the cinema, everything else Jellyfin) + the image that bakes web/ in
+.github/workflows           builds and publishes the images on push to main / stable
+docker-compose.dev.yml      overlay: build locally and serve web/ from the folder
 web/                        the front-end (plain HTML/CSS/JS, no build step)
 helper/                     tiny Python service: Letterboxd ratings & countries, app config, admin actions
 provision/                  one-shot container that configures Radarr, Prowlarr and Jellyfin over their APIs
@@ -55,7 +63,7 @@ scripts/                    installers
 ## Roadmap
 
 - **Playback on modest machines.** Without a GPU, transcoding falls to the CPU: a laptop copes with one 1080p stream and struggles with 4K or HEVC. To do: Intel QSV and AMD VAAPI overlays alongside the NVIDIA one; a sensible default streaming bitrate on the client (with an "original quality" option) so remote viewing doesn't ask for 120 Mbps; prefer direct play by detecting what the browser can decode (HEVC in Safari, AV1 in Chrome) before transcoding; optionally pre-transcode films to an H.264 1080p sidecar overnight so playback never depends on the CPU at showtime. Docker on macOS has no access to the Mac's video hardware, so a Mac host would need Jellyfin running natively to use VideoToolbox — worth documenting.
-- Pinned image versions and a release cadence.
+- Pin the third-party images to known-good versions per release, rather than `:latest`.
 
 ## Licence
 

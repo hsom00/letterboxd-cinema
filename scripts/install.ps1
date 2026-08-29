@@ -10,16 +10,14 @@ function Ask($prompt, $default) {
 function NewKey { -join ((1..32) | ForEach-Object { '0123456789abcdef'[(Get-Random -Maximum 16)] }) }
 
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { Write-Host "Docker Desktop is not installed (or not on PATH). Install it from docker.com, then re-run."; exit 1 }
-docker info *> $null; if ($LASTEXITCODE -ne 0) { Write-Host "Docker Desktop is installed but not running. Start it, wait for the whale to settle, then re-run."; exit 1 }
-if (Test-Path .env) { Write-Host "A .env from a previous run exists. Continuing will rewrite it (folders and settings already on disk are kept)."; Read-Host "Press Enter to continue, or Ctrl-C to stop" | Out-Null }
+if (Test-Path .env) { Write-Host ".env already exists — delete it to start over, or edit it directly."; exit 1 }
 
 Write-Host ""
 Write-Host "  Letterboxd Cinema — setup" -ForegroundColor White
 Write-Host ""
 $media  = (Ask "Folder for films and downloads (will get movies\ and downloads\ inside)" "D:\Media") -replace '\\','/'
 $config = (Ask "Folder for app settings and databases" "D:\Cinema\config") -replace '\\','/'
-if ($media -eq $config) { $config = "$media/.config"; Write-Host "  (settings will go in $config so they stay out of the way of the films)" }
-do { $tz = Ask "Timezone (Region/City, e.g. Europe/London)" "Europe/London"; if ($tz -notmatch '/') { Write-Host "  That's not a timezone name — it looks like 'Europe/London' or 'America/New_York'." } } until ($tz -match '/')
+$tz     = Ask "Timezone" ((Get-TimeZone).Id -replace ' ', '_' | ForEach-Object { if ($_ -match '^[A-Za-z]+/[A-Za-z_]+$') { $_ } else { 'Europe/London' } })
 $mode   = Ask "Access: 'lan' (this network only) or 'public' (your own domain, HTTPS)" "lan"
 $site = ':80'; $cf = ''
 if ($mode -eq 'public') {
@@ -28,12 +26,11 @@ if ($mode -eq 'public') {
 }
 $gpu = Ask "GPU for transcoding: 'nvidia' or 'none'" "none"
 $httpPort = Ask "Web port (80 unless something else is using it)" "80"
-if ($httpPort -eq '80') { $httpsPort = '443'; $discPort = '7359'; $peerPort = '51413' }
-else { $httpsPort = Ask "HTTPS port" "8443"; $discPort = Ask "Jellyfin discovery port (UDP)" "7360"; $peerPort = Ask "Torrent peer port" "51414" }
+$httpsPort = if ($httpPort -eq '80') { '443' } else { Ask "HTTPS port" "8443" }
+$peerPort = Ask "Torrent peer port" "51413"
+$discPort = if ($httpPort -eq '80') { '7359' } else { Ask "Jellyfin discovery port (UDP)" "7360" }
 
-function ExistingKey($path) { if (Test-Path $path) { $m = [regex]::Match((Get-Content $path -Raw), '<ApiKey>([^<]+)</ApiKey>'); if ($m.Success) { return $m.Groups[1].Value } } ; $null }
-$radarrKey   = ExistingKey "$config/radarr/config.xml";   if (-not $radarrKey)   { $radarrKey = NewKey }
-$prowlarrKey = ExistingKey "$config/prowlarr/config.xml"; if (-not $prowlarrKey) { $prowlarrKey = NewKey }
+$radarrKey = NewKey; $prowlarrKey = NewKey
 
 # ---- folders
 foreach ($d in "$media/movies", "$media/downloads/complete", "$media/downloads/incomplete",
@@ -69,7 +66,7 @@ $env -join "`n" | Set-Content -NoNewline .env
 
 Write-Host ""
 Write-Host "Starting…" -ForegroundColor White
-docker compose up -d --build
+docker compose up -d
 Write-Host ""
 if ($mode -eq 'public') { Write-Host "Done. Forward TCP 80 and 443 on your router to this PC, then open https://$site" }
 else { Write-Host "Done. Open http://localhost$(if ($httpPort -ne '80') { ":$httpPort" }) (or this PC's IP from another device on your network)." }

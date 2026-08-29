@@ -1,0 +1,17 @@
+# Overlay for working on the code: build the images locally and serve web/ straight from the folder,
+# so edits show on refresh.  Use:  COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml  in .env,
+# then  docker compose up -d --build
+services:
+  caddy:
+    build:
+      context: .
+      dockerfile: caddy/Dockerfile
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./web:/srv/app:ro
+  helper:
+    build:
+      context: .
+      dockerfile: helper/Dockerfile
+  provision:
+    build: ./provision

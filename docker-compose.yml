@@ -9,6 +9,8 @@
 #   COMPOSE_PROFILES=public          adds Cloudflare dynamic DNS for a public domain
 #   COMPOSE_FILE=docker-compose.yml:docker-compose.nvidia.yml   NVIDIA GPU transcoding for Jellyfin
 #   HTTP_PORT / HTTPS_PORT / PEER_PORT / DISCOVERY_PORT           change if something else already uses 80/443/51413/7359
+#   CHANNEL=stable|main              which published images to follow (Watchtower pulls updates on its schedule)
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml       build locally from this folder instead (for development)
 #
 # Two installs can run side by side (e.g. a test next to a live one): give each its own folder, ports and CONFIG_PATH.
 
@@ -88,9 +90,7 @@ services:
   # Letterboxd ratings/countries, app config, and admin actions that need server-side secrets
   helper:
     restart: unless-stopped
-    build:
-      context: .
-      dockerfile: helper/Dockerfile
+    image: ghcr.io/hsom00/letterboxd-cinema/helper:${CHANNEL:-stable}
     env_file: .env
     environment:
       APP_NAME: ${APP_NAME:-Cinema}
@@ -99,12 +99,10 @@ services:
 
   caddy:
     restart: unless-stopped
-    image: caddy:2
+    image: ghcr.io/hsom00/letterboxd-cinema/web:${CHANNEL:-stable}
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-:80}
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./web:/srv/app:ro
       - ${CONFIG_PATH}/caddy/data:/data
       - ${CONFIG_PATH}/caddy/config:/config
     ports:
@@ -114,7 +112,7 @@ services:
 
   # One-shot: configures Radarr, Prowlarr and Jellyfin over their APIs on every `up` (safe to re-run)
   provision:
-    build: ./provision
+    image: ghcr.io/hsom00/letterboxd-cinema/provision:${CHANNEL:-stable}
     env_file: .env
     volumes:
       - ${CONFIG_PATH}/helper:/data
@@ -128,7 +126,7 @@ services:
     profiles: ["public"]
     env_file: .env
     environment:
-      DOMAINS: ${SITE_ADDRESS}
+      DOMAINS: ${SITE_ADDRESS:-}
       PROXIED: "false"
       IP6_PROVIDER: none
       UPDATE_CRON: "@every 5m"
