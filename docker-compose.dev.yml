@@ -14,4 +14,6 @@ services:
       context: .
       dockerfile: helper/Dockerfile
   provision:
-    build: ./provision
+    build:
+      context: .
+      dockerfile: provision/Dockerfile
