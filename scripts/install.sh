@@ -11,7 +11,7 @@ command -v docker >/dev/null || { echo "Docker is not installed. Install Docker 
 
 echo; echo "  Letterboxd Cinema — setup"; echo
 media=$(ask "Folder for films and downloads (will get movies/ and downloads/ inside)" "$HOME/media")
-config=$(ask "Folder for app settings and databases" "$HOME/cinema/config")
+config=$(ask "Folder for app settings and databases" "$PWD/appdata")
 tz=$(ask "Timezone" "$( (readlink /etc/localtime 2>/dev/null | sed 's|.*/zoneinfo/||') || echo Europe/London)")
 mode=$(ask "Access: 'lan' (this network only) or 'public' (your own domain, HTTPS)" "lan")
 site=":80"; cf=""

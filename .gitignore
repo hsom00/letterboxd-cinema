@@ -3,3 +3,7 @@
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# a common place to keep an install's live settings inside the clone
+appdata/
+backup-*/
