@@ -1,70 +1,90 @@
 # Letterboxd Cinema
 
-A self-hosted film library that feels like a cinema, not a spreadsheet.
+**Add a film to your Letterboxd watchlist. A little later, it's waiting for you in your own cinema.**
 
-Full-bleed stills, serif titles, one film at a time. Letterboxd ratings as plain white stars. A "pick one for me" button. Filter by country. Films arrive on their own from your Letterboxd lists, get picked up by Jellyfin, and play in the page with the lights dimmed. Everything runs in Docker on a machine in your house.
+Letterboxd Cinema is a private cinema that runs on a computer in your home. It watches your Letterboxd watchlist, finds and fetches each film, files it neatly, and shows it to you the way a film deserves: full-screen stills, a few lines about it, a rating in white stars, and a Play button that dims the lights. No folders to manage, no torrent clients to babysit, no settings pages full of jargon. You keep a watchlist; you get a cinema.
 
-Under the hood it's Jellyfin, Radarr, Prowlarr and Transmission, pre-wired so you never have to open them, with a small front-end and helper on top. It is not affiliated with Letterboxd; it just loves it.
+It's for people who love films and would rather not become sysadmins to watch them.
+
+## What it feels like
+
+- **Now showing** — one film at a time, full-bleed, like walking past the posters. Scroll to the next.
+- **All films** — the whole collection as a grid, sortable, filterable by country.
+- **Random** — can't decide? One press.
+- **Play** — the page dims to black and the film starts, right there. Subtitles and audio tracks where the film has them. It remembers where you stopped, on every device.
+- Ratings come from Letterboxd. Countries come from where a film was actually made, not just who co-produced it.
+
+It works in any browser, at home or away, and the Jellyfin apps on your TV and phone work with it too.
 
 ## What you need
 
-- A computer that stays on (Windows, macOS or Linux) with [Docker](https://www.docker.com/) installed.
-- Somewhere to keep films — a big disk or folder.
-- Optionally: a domain on Cloudflare if you want to watch from outside the house, and an NVIDIA GPU if you want hardware transcoding.
+- A computer that can stay switched on — a desktop PC, a Mac mini, an old laptop, a little home server. Windows, macOS or Linux.
+- Space for films. A big drive, or a folder on one.
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed on that computer. It's free; the cinema runs inside it.
+- Optional: your own web address (a domain on Cloudflare) if you want to watch from anywhere. Optional: an NVIDIA graphics card, if you want smoother playback on phones and slow connections.
 
-## Install
+## Setting it up
 
-```powershell
-git clone https://github.com/hsom00/letterboxd-cinema
-cd letterboxd-cinema
-.\scripts\install.ps1        # Windows
-./scripts/install.sh         # macOS / Linux
-```
+1. **Get the code.** In a terminal (PowerShell on Windows, Terminal on Mac):
+   ```
+   git clone https://github.com/hsom00/letterboxd-cinema
+   cd letterboxd-cinema
+   ```
+2. **Run the installer.** It asks where to keep films and settings, your timezone, whether this is for home only or the whole internet, and whether you have an NVIDIA card. Defaults are fine.
+   ```
+   .\scripts\install.ps1        # Windows
+   bash scripts/install.sh      # Mac / Linux
+   ```
+   The first start downloads everything it needs; give it a few minutes.
+3. **Open `http://localhost`** in a browser on that computer. You'll be walked through naming your cinema, creating your account, connecting your Letterboxd, and choosing where films may come from. Then sign in.
 
-The installer asks about the machine — folders, timezone, LAN or public, GPU, ports — writes `.env`, pre-seeds every service's settings, and starts the stack. First start pulls the images and takes a few minutes.
+That's it. Add something to your Letterboxd watchlist and check back in an hour.
 
-Then open `http://localhost`. Your first visit is a short onboarding in the cinema's own design: name it, create your account, give your Letterboxd username, choose where films may come from. On "Set up my cinema" everything is wired together over the services' APIs — Jellyfin account and Movies library, Radarr to Transmission with hard-linking and a size ceiling per quality, Prowlarr to Radarr, your watchlist as the shopping list — and you sign in. Nothing else to configure; the projection booth (Radarr, Prowlarr, Transmission at `localhost:7878`, `:9696`, `:9091`) is there if you ever want it, reachable only from the machine itself.
+## Everyday use
 
-Anything you add to your Letterboxd watchlist turns up in the cinema.
+You mostly don't touch it. Films arrive from your watchlist. New versions of everything install themselves weekly. If you'd like to poke at things, your initial in the top-right corner opens **Settings**: look for new films right now, change your Letterboxd, see what's downloading, switch sources on and off, rename the cinema. Admins also get a quiet "Remove from library" at the bottom of any film page.
 
-## Remote access
+Watching from outside the house: either choose *public* during setup (you'll need a domain on Cloudflare and to forward two ports on your router — the installer tells you which), or keep it home-only and use [Tailscale](https://tailscale.com) on the server and your laptop, which needs no router changes at all.
 
-Choose `public` in the installer, give it a hostname you own on Cloudflare and an API token with *Edit zone DNS* for that zone. Forward TCP 80 and 443 (and UDP 443 if you can) on your router to the machine. Caddy fetches and renews the HTTPS certificate; a small container keeps the DNS record pointed at your home IP when it changes. Only the cinema is published — never Radarr, Prowlarr or Transmission.
+A word on responsibility: the cinema fetches films from public sources you choose. What you download, and whether you may, is between you and the law where you live.
 
-Prefer not to open ports? Stay on `lan` and use [Tailscale](https://tailscale.com) on the server and your laptop.
+## Under the bonnet
 
-## Updates
+For the curious and the technical. Everything below is optional reading.
 
-Nothing to do. The stack's Watchtower checks weekly for new versions of everything — Jellyfin, Radarr and friends, and the cinema's own images, which GitHub builds and publishes whenever the `stable` branch moves. `CHANNEL=main` in `.env` follows every commit instead. The only change that needs a hand is one to `docker-compose.yml` itself: `git pull && docker compose up -d`.
-
-To work on the code, set `COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml` in `.env` and `docker compose up -d --build`; the front-end is then served straight from `web/` and edits show on refresh.
-
-## Layout
+The cinema is a thin, hand-made front-end over a stack of well-known open-source tools, pre-wired so you never have to open them: **Jellyfin** (the media server and player back-end), **Radarr** (decides what to fetch and files it), **Prowlarr** (talks to the sources), **Transmission** (does the fetching), **Decluttarr** (clears stuck downloads and tries again), **letterboxd-list-radarr** (turns a Letterboxd list into something Radarr understands), **Caddy** (serves the site and gets your HTTPS certificate), and **Watchtower** (keeps everything updated). Plus two small pieces of our own: a **helper** that fetches Letterboxd ratings and countries and handles admin actions, and a **provisioner** that configures all of the above over their APIs on first start.
 
 ```
 docker-compose.yml          the stack; every path and name comes from .env
 docker-compose.nvidia.yml   overlay: NVIDIA transcoding for Jellyfin
-caddy/                      Caddyfile (routing: / and /app/* are the cinema, everything else Jellyfin) + the image that bakes web/ in
-.github/workflows           builds and publishes the images on push to main / stable
-docker-compose.dev.yml      overlay: build locally and serve web/ from the folder
-web/                        the front-end (plain HTML/CSS/JS, no build step)
-helper/                     tiny Python service: Letterboxd ratings & countries, app config, admin actions
-provision/                  one-shot container that configures Radarr, Prowlarr and Jellyfin over their APIs
+docker-compose.dev.yml      overlay: build the images locally and serve web/ from the folder
+web/                        the front-end — plain HTML, CSS and JavaScript, no build step
+helper/                     Python: Letterboxd lookups, /api/config, onboarding, admin actions
+provision/                  Python: configures Radarr, Prowlarr and Jellyfin; runs on every start, idempotent
+caddy/                      Caddyfile and the image that bakes web/ into Caddy
 config/                     pre-seeded settings the installer copies into place
 scripts/                    installers
+appdata/                    (created by the installer, not in git) every service's settings and databases
 ```
 
-`MEDIA_PATH` gets `movies/` and `downloads/`. Every container sees it as `/data`, so Radarr moves finished downloads into the library with a hard link rather than a copy, and Jellyfin reads the same folder read-only.
+**Paths.** `MEDIA_PATH` gets `movies/` and `downloads/`; every container sees it as `/data`, so Radarr moves a finished download into the library with a hard link rather than a copy, and Jellyfin reads the same folder read-only. `CONFIG_PATH` (default `appdata/` inside the clone) holds each service's state.
 
-## Keyboard
+**Ports.** Only the cinema is exposed (80/443). Radarr, Prowlarr, Transmission and Jellyfin are bound to `127.0.0.1` — reachable from the machine itself at `:7878`, `:9696`, `:9091`, `:8096` — and never from the network.
 
-`R` random film · `G` toggle reel/grid · `Esc` close · in the player: `Space`, `←` `→` ±10s, `F` fullscreen, `M` mute.
+**Updates.** GitHub builds the three images (`web`, `helper`, `provision`) whenever the `stable` branch moves and publishes them to `ghcr.io/hsom00/letterboxd-cinema/`. Watchtower pulls them, and the third-party images, weekly. `CHANNEL=main` in `.env` follows every commit. A change to `docker-compose.yml` itself is the one thing that needs a hand: `git pull && docker compose up -d`.
+
+**Developing.** Set `COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml` in `.env` and `docker compose up -d --build`. The front-end is served straight from `web/`; edits show on refresh. `COMPOSE_PATH_SEPARATOR=:` is set by the installer so that line works on Windows too.
+
+**Two installs on one machine** (a test next to a live one): separate folders, separate `CONFIG_PATH`, and different `HTTP_PORT`/`HTTPS_PORT`/`PEER_PORT`/`DISCOVERY_PORT`.
+
+**Keyboard.** `R` random · `G` reel/grid · `Esc` close · in the player: `Space`, `←` `→` ±10s, `F` fullscreen, `M` mute.
 
 ## Roadmap
 
-- **Playback on modest machines.** Without a GPU, transcoding falls to the CPU: a laptop copes with one 1080p stream and struggles with 4K or HEVC. To do: Intel QSV and AMD VAAPI overlays alongside the NVIDIA one; a sensible default streaming bitrate on the client (with an "original quality" option) so remote viewing doesn't ask for 120 Mbps; prefer direct play by detecting what the browser can decode (HEVC in Safari, AV1 in Chrome) before transcoding; optionally pre-transcode films to an H.264 1080p sidecar overnight so playback never depends on the CPU at showtime. Docker on macOS has no access to the Mac's video hardware, so a Mac host would need Jellyfin running natively to use VideoToolbox — worth documenting.
+- **Installer, properly.** One cross-platform installer that checks Docker and ports before asking anything, validates paths and timezone, re-runs safely, and has a non-interactive mode. Ideally the machine questions move into the browser too.
+- **Playback on modest machines.** Intel and AMD transcoding overlays; a sensible default streaming bitrate with an "original quality" option; prefer direct play when the browser can decode the file; optionally pre-transcode an H.264 copy overnight. (Docker on macOS can't reach the Mac's video hardware; a Mac host would need Jellyfin running natively for that.)
 - Pin the third-party images to known-good versions per release, rather than `:latest`.
 
 ## Licence
 
-MIT.
+MIT. Not affiliated with Letterboxd; it just loves it.

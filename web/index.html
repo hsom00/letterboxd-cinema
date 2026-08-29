@@ -29,44 +29,58 @@
 </header>
 
 <section class="setup" id="setup" hidden>
-  <form id="setup-form" autocomplete="off">
+  <form id="setup-form" autocomplete="off" novalidate>
     <div class="wordmark">Letterboxd Cinema</div>
     <ol class="steps" id="steps" aria-hidden="true"><li></li><li></li><li></li><li></li></ol>
 
-    <fieldset data-step="1">
-      <h1>Name your cinema</h1>
-      <p>It goes on the marquee — the wordmark at the top of every page.</p>
-      <label><span class="label">Name</span><input name="name" type="text" required maxlength="40" placeholder="e.g. The Bijou"></label>
+    <fieldset data-step="0">
+      <h1>Welcome to your cinema</h1>
+      <p>In a few minutes this becomes a place to watch the films on your Letterboxd watchlist — found, fetched and shelved for you, and shown off properly.</p>
+      <p>Four short questions. Nothing you can't change later.</p>
+    </fieldset>
+
+    <fieldset data-step="1" hidden>
+      <h1>What's it called?</h1>
+      <p>This goes on the marquee at the top of every page. Your surname, your street, your cat — whatever a cinema of yours would be called.</p>
+      <label><span class="label">Name</span><input name="name" type="text" maxlength="40" placeholder="The Bijou" spellcheck="false"></label>
     </fieldset>
 
     <fieldset data-step="2" hidden>
       <h1>Your account</h1>
-      <p>This is the account you sign in with, on every device. It also runs the projection booth.</p>
-      <label><span class="label">Username</span><input name="admin_user" type="text" autocomplete="username" maxlength="40"></label>
-      <label><span class="label">Password</span><input name="admin_password" type="password" autocomplete="new-password" minlength="8"></label>
+      <p>You'll sign in with this on every device. It's also the key to the projection booth, so make the password a real one.</p>
+      <label><span class="label">Username</span><input name="admin_user" type="text" autocomplete="username" maxlength="40" spellcheck="false"></label>
+      <label><span class="label">Password</span><span class="pw"><input name="admin_password" type="password" autocomplete="new-password" minlength="8"><button type="button" class="pw-toggle" id="pw-toggle" aria-label="Show password">Show</button></span><span class="hint">At least 8 characters.</span></label>
     </fieldset>
 
     <fieldset data-step="3" hidden>
       <h1>Your Letterboxd</h1>
-      <p>Films you add to your Letterboxd watchlist are found, fetched and shelved here on their own. Optional — you can add it later.</p>
-      <label><span class="label">Letterboxd username</span><input name="letterboxd_user" type="text" placeholder="as in letterboxd.com/username"></label>
+      <p>Add a film to your Letterboxd watchlist and it turns up here on its own, usually within the hour. This is the whole point — but it's optional, and you can add it later in Settings.</p>
+      <label><span class="label">Letterboxd username</span><input name="letterboxd_user" type="text" placeholder="the bit after letterboxd.com/" spellcheck="false"></label>
+      <span class="hint">Your watchlist needs to be public on Letterboxd (it is by default).</span>
     </fieldset>
 
     <fieldset data-step="4" hidden>
       <h1>Where films come from</h1>
-      <p>Choose the sources the cinema may search. These are the public ones it knows about; you can change this any time in the projection booth.</p>
-      <div class="sources" id="sources"><span class="label">Loading…</span></div>
+      <p>The cinema searches public sources for the films you want. Pick a few — three or four is plenty — or skip this and add sources in Settings whenever you like.</p>
+      <div class="sources" id="sources"><span class="label">Loading the list…</span></div>
+      <span class="hint" id="sources-count"></span>
     </fieldset>
 
     <fieldset data-step="5" hidden>
       <h1>Setting up</h1>
-      <p>Wiring everything together. This takes a minute or two.</p>
+      <p>Creating your account, building the library, and wiring the machinery together. About a minute.</p>
       <ul class="setup-log" id="setup-log"></ul>
+    </fieldset>
+
+    <fieldset data-step="6" hidden>
+      <h1>Your cinema is ready</h1>
+      <p id="ready-copy">Sign in with the account you just made. Films from your watchlist will start arriving shortly — the first few take a while, because they're being found and fetched from scratch.</p>
+      <p>Anything else — sources, your Letterboxd, the name — lives under your initial in the top-right corner, in Settings.</p>
     </fieldset>
 
     <div class="setup-nav">
       <button type="button" class="btn ghost" id="setup-back" hidden>Back</button>
-      <button type="submit" class="btn" id="setup-next">Continue</button>
+      <button type="submit" class="btn" id="setup-next">Let's go</button>
     </div>
     <p class="err" id="setup-err" hidden></p>
   </form>
