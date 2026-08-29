@@ -1,0 +1,33 @@
+# Decluttarr: tidies Radarr's download queue and re-searches when something is stuck.
+general:
+  timer: 10
+  test_run: false
+  log_level: INFO
+  private_tracker_handling: remove
+  public_tracker_handling: remove
+
+jobs:
+  remove_failed_downloads: true
+  remove_failed_imports:
+    message_patterns:
+      - "*Unable to parse*"
+      - "*Not a Custom Format upgrade*"
+      - "*Invalid video file*"
+      - "*No files found are eligible for import*"
+      - "*Sample*"
+  remove_metadata_missing:
+    max_strikes: 3
+    detect_via_missing_size: true
+  remove_stalled:
+    max_strikes: 3
+  remove_slow:
+    min_speed: 100
+    max_strikes: 3
+  remove_orphans: true
+  remove_unmonitored: true
+  remove_bad_files: false
+
+instances:
+  radarr:
+    - base_url: "http://radarr:7878"
+      api_key: !ENV RADARR_API_KEY

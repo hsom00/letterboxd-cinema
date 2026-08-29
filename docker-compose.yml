@@ -1,0 +1,142 @@
+# Letterboxd Cinema — a self-hosted film library with a cinema-grade front-end.
+# Everything is configured through .env (copy .env.example, or run scripts/install.*).
+#
+#   MEDIA_PATH   e.g. D:/Media or /srv/media      -> movies/ and downloads/ live here
+#   CONFIG_PATH  e.g. D:/Cinema/config             -> each service's settings and databases
+#   SITE_ADDRESS films.example.com (public, HTTPS via Let's Encrypt) or :80 (LAN only)
+#
+# Optional overlays (set in .env):
+#   COMPOSE_PROFILES=public          adds Cloudflare dynamic DNS for a public domain
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.nvidia.yml   NVIDIA GPU transcoding for Jellyfin
+
+x-common: &common
+  restart: unless-stopped
+  environment: &common-env
+    TZ: ${TZ:-Europe/London}
+    PUID: ${PUID:-1000}
+    PGID: ${PGID:-1000}
+
+services:
+  # ---------- library management ----------
+  prowlarr:
+    <<: *common
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    volumes:
+      - ${CONFIG_PATH}/prowlarr:/config
+    ports:
+      - "127.0.0.1:9696:9696"
+
+  radarr:
+    <<: *common
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    volumes:
+      - ${CONFIG_PATH}/radarr:/config
+      - ${MEDIA_PATH}:/data
+    ports:
+      - "127.0.0.1:7878:7878"
+
+  transmission:
+    <<: *common
+    image: lscr.io/linuxserver/transmission:latest
+    container_name: transmission
+    volumes:
+      - ${CONFIG_PATH}/transmission:/config
+      - ${MEDIA_PATH}:/data
+    ports:
+      - "127.0.0.1:9091:9091"
+      - "51413:51413"
+      - "51413:51413/udp"
+
+  decluttarr:
+    <<: *common
+    image: ghcr.io/manimatter/decluttarr:latest
+    container_name: decluttarr
+    env_file: .env
+    volumes:
+      - ./config/decluttarr.yaml:/app/config/config.yaml:ro
+      - ${MEDIA_PATH}:/data:ro
+
+  # Letterboxd lists -> Radarr import lists. Radarr reaches it at http://letterboxd-list:5000/<user>/list/<slug>/
+  letterboxd-list:
+    restart: unless-stopped
+    image: screeny05/letterboxd-list-radarr:latest
+    container_name: letterboxd-list
+    environment:
+      REDIS_URL: redis://letterboxd-list-redis:6379
+      PORT: "5000"
+    depends_on: [letterboxd-list-redis]
+
+  letterboxd-list-redis:
+    restart: unless-stopped
+    image: redis:7-alpine
+    container_name: letterboxd-list-redis
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save ""
+
+  # ---------- the cinema ----------
+  jellyfin:
+    restart: unless-stopped
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      TZ: ${TZ:-Europe/London}
+    volumes:
+      - ${CONFIG_PATH}/jellyfin:/config
+      - ${CONFIG_PATH}/jellyfin-cache:/cache
+      - ${MEDIA_PATH}:/data:ro
+    ports:
+      - "127.0.0.1:8096:8096"
+      - "7359:7359/udp"
+
+  # Letterboxd ratings/countries, app config, and admin actions that need server-side secrets
+  helper:
+    restart: unless-stopped
+    build: ./helper
+    container_name: helper
+    env_file: .env
+    environment:
+      APP_NAME: ${APP_NAME:-Cinema}
+    volumes:
+      - ${CONFIG_PATH}/helper:/data
+
+  caddy:
+    restart: unless-stopped
+    image: caddy:2
+    container_name: caddy
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./web:/srv/app:ro
+      - ${CONFIG_PATH}/caddy/data:/data
+      - ${CONFIG_PATH}/caddy/config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+
+  # ---------- upkeep ----------
+  ddns:
+    restart: unless-stopped
+    image: favonia/cloudflare-ddns:latest
+    container_name: ddns
+    profiles: ["public"]
+    env_file: .env
+    environment:
+      DOMAINS: ${SITE_ADDRESS}
+      PROXIED: "false"
+      IP6_PROVIDER: none
+      UPDATE_CRON: "@every 5m"
+
+  watchtower:
+    restart: unless-stopped
+    image: nickfedor/watchtower:latest
+    container_name: watchtower
+    environment:
+      TZ: ${TZ:-Europe/London}
+      WATCHTOWER_SCHEDULE: "0 0 4 * * 1"
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_INCLUDE_RESTARTING: "true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

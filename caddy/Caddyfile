@@ -1,0 +1,39 @@
+# SITE_ADDRESS comes from .env: a hostname (HTTPS, certificate fetched automatically) or ":80" for LAN-only.
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	log {
+		output file /data/access.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+	}
+
+	# The cinema front-end
+	@home path /
+	handle @home {
+		root * /srv/app
+		rewrite * /index.html
+		file_server
+	}
+	handle_path /app/* {
+		root * /srv/app
+		file_server
+	}
+
+	# Helper: Letterboxd data, app config, admin actions (the helper verifies the caller is a Jellyfin admin)
+	handle_path /api/letterboxd/* {
+		reverse_proxy helper:8080
+	}
+	handle /api/config {
+		reverse_proxy helper:8080
+	}
+	handle /api/admin/* {
+		reverse_proxy helper:8080
+	}
+
+	# Everything else is Jellyfin (its own UI at /web/, and the API the phone/TV apps use)
+	handle {
+		reverse_proxy jellyfin:8096
+	}
+}

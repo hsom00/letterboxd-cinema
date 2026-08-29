@@ -1,0 +1,11 @@
+{
+  "download-dir": "/data/downloads/complete",
+  "incomplete-dir": "/data/downloads/incomplete",
+  "incomplete-dir-enabled": true,
+  "download-queue-enabled": true,
+  "download-queue-size": 8,
+  "rpc-authentication-required": false,
+  "rpc-whitelist-enabled": false,
+  "rpc-host-whitelist-enabled": false,
+  "umask": 2
+}

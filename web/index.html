@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Letterboxd Cinema</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;1,400&family=Inter:wght@300;400;500&family=Jost:wght@500&display=swap">
+<link rel="stylesheet" href="/app/style.css">
+<link rel="icon" href="data:,">
+</head>
+<body data-view="reel">
+
+<header class="bar" id="bar" hidden>
+  <a class="wordmark js-name" href="/">Cinema</a>
+  <div class="views" role="group" aria-label="View">
+    <button id="v-reel" aria-pressed="true">Now showing</button>
+    <button id="v-grid" aria-pressed="false">All films</button>
+  </div>
+  <div class="right">
+    <div class="menu-wrap">
+      <button class="country-btn" id="country-btn" aria-expanded="false"><span id="country-label">Countries</span></button>
+      <div class="menu countries" id="countries" hidden></div>
+    </div>
+    <button class="pick" id="pick" title="Pick a film at random (R)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+      <span class="txt">Pick one for me</span>
+    </button>
+    <button class="me" id="me" title="Account"></button>
+  </div>
+</header>
+
+<section class="login" id="login" hidden>
+  <form id="login-form">
+    <div class="wordmark js-name">Cinema</div>
+    <label><span class="label">Username</span><input name="user" type="text" autocomplete="username" required autofocus></label>
+    <label><span class="label">Password</span><input name="pass" type="password" autocomplete="current-password"></label>
+    <button class="btn" type="submit">Sign in</button>
+    <p class="err" id="login-err" hidden></p>
+  </form>
+</section>
+
+<main class="reel" id="reel"></main>
+
+<section class="library" id="library" aria-label="All films">
+  <header>
+    <h1>All films <span class="label" id="count"></span></h1>
+    <div class="sort" id="sort">
+      <button data-sort="added" aria-pressed="true">Recently added</button>
+      <button data-sort="title">Title</button>
+      <button data-sort="year">Year</button>
+      <button data-sort="rating">Rating</button>
+    </div>
+  </header>
+  <div class="grid" id="grid"></div>
+  <p class="empty" id="empty" hidden>Nothing matches that.</p>
+</section>
+
+<div class="film" id="film" role="dialog" aria-modal="true" aria-labelledby="film-title"></div>
+
+<div class="menu" id="menu" hidden>
+  <div class="menu-group" role="group" aria-label="Start with">
+    <span class="label">Start with</span>
+    <button data-start="newest" aria-pressed="true">Newest first</button>
+    <button data-start="random">A random film</button>
+  </div>
+  <a href="/web/index.html#/home.html">Open Jellyfin</a>
+  <button id="signout">Sign out</button>
+</div>
+
+<script src="/app/vendor/hls.min.js"></script>
+<script src="/app/player.js"></script>
+<script src="/app/app.js"></script>
+</body>
+</html>
