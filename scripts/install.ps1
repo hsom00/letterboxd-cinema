@@ -19,7 +19,7 @@ Write-Host ""
 Write-Host "  Letterboxd Cinema — setup" -ForegroundColor White
 Write-Host ""
 $media  = (Ask "Folder for films and downloads (will get movies\ and downloads\ inside)" "D:\Media") -replace '\\','/'
-$config = (Ask "Folder for app settings and databases" "D:\Cinema\config") -replace '\\','/'
+$config = (Ask "Folder for app settings and databases" (Join-Path (Get-Location).Path 'appdata')) -replace '\\','/'
 $tz     = Ask "Timezone" ((Get-TimeZone).Id -replace ' ', '_' | ForEach-Object { if ($_ -match '^[A-Za-z]+/[A-Za-z_]+$') { $_ } else { 'Europe/London' } })
 $mode   = Ask "Access: 'lan' (this network only) or 'public' (your own domain, HTTPS)" "lan"
 $site = ':80'; $cf = ''
