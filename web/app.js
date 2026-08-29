@@ -319,7 +319,7 @@ async function start() {
   if (config.setup) { document.body.dataset.view = 'setup'; $('#setup').hidden = false; showStep(1); return; }
   if (!session) { document.body.dataset.view = 'login'; $('#login').hidden = false; return; }
   $('#bar').hidden = false; $('#me').textContent = session.userName[0].toUpperCase();
-  api('/Users/Me').then(me => { session.admin = !!me?.Policy?.IsAdministrator; $('#rescan').hidden = !session.admin; }).catch(() => {});
+  api('/Users/Me').then(me => { session.admin = !!me?.Policy?.IsAdministrator; $('#open-settings').hidden = !session.admin; }).catch(() => {});
   $('#reel').innerHTML = `<div class="loading">Loading</div>`;
   try { films = await loadFilms(); } catch (e) { $('#reel').innerHTML = `<div class="loading">Could not load the library — ${esc(e.message)}</div>`; return; }
   if (!films.length) { $('#reel').innerHTML = `<div class="loading">No films yet</div>`; return; }
@@ -377,11 +377,42 @@ $('#sort').addEventListener('click', (e) => { const b = e.target.closest('[data-
 $('#me').onclick = () => { $('#menu').hidden = !$('#menu').hidden; };
 document.querySelectorAll('[data-start]').forEach(b => { b.setAttribute('aria-pressed', b.dataset.start === startMode); b.onclick = () => setStart(b.dataset.start); });
 $('#signout').onclick = signOut;
-$('#rescan').onclick = async () => {
-  const b = $('#rescan'); b.textContent = 'Looking…'; b.disabled = true;
-  try { await fetch('/api/admin/scan', { method: 'POST', headers: { 'X-Jellyfin-Token': session.token } }); } catch {}
-  setTimeout(async () => { try { films = await loadFilms(); renderReel(reelOrder()); if (view === 'grid') renderGrid(); prefetchMeta(); } catch {} b.textContent = 'Look for new films'; b.disabled = false; $('#menu').hidden = true; }, 20000);
-};
+/* ---------- settings pane (admins) ---------- */
+const adminFetch = (path, opts = {}) => fetch(path, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Jellyfin-Token': session.token, ...(opts.headers || {}) } });
+let queueTimer;
+async function openSettings() {
+  $('#menu').hidden = true; $('#settings').hidden = false; document.body.style.overflow = 'hidden'; $('#settings').scrollTop = 0;
+  await refreshSettings(); clearInterval(queueTimer); queueTimer = setInterval(refreshQueue, 10000);
+}
+function closeSettings() { $('#settings').hidden = true; document.body.style.overflow = ''; clearInterval(queueTimer); }
+async function refreshSettings() {
+  let d; try { d = await (await adminFetch('/api/admin/settings')).json(); } catch { return; }
+  $('#s-name').value = d.name || ''; $('#s-lb').value = d.letterboxd_user || '';
+  renderQueue(d.queue || []);
+  $('#s-sources').innerHTML = (d.sources || []).length ? d.sources.map(x => `<li><span>${esc(x.name)}<span class="p">${esc(x.privacy || '')}</span></span><button class="s-toggle" data-src="${x.id}" aria-pressed="${x.enabled}" title="${x.enabled ? 'On' : 'Off'}"></button></li>`).join('')
+    : '<li class="s-empty">No sources yet.</li>';
+  $('#s-add').innerHTML = '<option value="">Add a source…</option>' + (d.available || []).map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join('');
+}
+async function refreshQueue() { try { const d = await (await adminFetch('/api/admin/settings')).json(); renderQueue(d.queue || []); } catch {} }
+function renderQueue(q) {
+  $('#s-queue').innerHTML = q.length ? q.map(r => `<li><span class="t">${esc(r.title)}${r.year ? ` <span class="m">${r.year}</span>` : ''}</span><span class="m">${r.pct}% · ${r.gb} GB${r.eta ? ' · ' + esc(r.eta.replace(/^00:/, '')) : ''}</span><span class="bar"><i style="width:${r.pct}%"></i></span>${r.warning ? `<span class="w">${esc(r.warning)}</span>` : ''}</li>`).join('')
+    : '<li class="s-empty">Nothing downloading.</li>';
+}
+async function applySettings(body, noteEl) {
+  noteEl.textContent = '…';
+  try { const r = await adminFetch('/api/admin/settings', { method: 'POST', body: JSON.stringify(body) }); const d = await r.json(); noteEl.textContent = (d.log || [d.error]).join(' · '); }
+  catch (e) { noteEl.textContent = 'Could not save — ' + e.message; }
+  refreshSettings(); loadConfig();
+}
+$('#open-settings').onclick = openSettings;
+$('#settings-close').onclick = closeSettings;
+$('#s-scan').onclick = async () => { const n = $('#s-scan-note'); n.textContent = 'Scanning…'; try { await adminFetch('/api/admin/scan', { method: 'POST' }); } catch {}
+  setTimeout(async () => { try { films = await loadFilms(); renderReel(reelOrder()); if (view === 'grid') renderGrid(); prefetchMeta(); } catch {} n.textContent = `Done — ${films.length} films.`; }, 20000); };
+$('#s-lb-save').onclick = () => applySettings({ letterboxd_user: $('#s-lb').value.trim().replace(/^.*letterboxd\.com\//, '').replace(/\/.*$/, '') }, $('#s-lb-note'));
+$('#s-lb-pull').onclick = async () => { const n = $('#s-lb-note'); n.textContent = 'Asking Radarr…'; try { const r = await adminFetch('/api/admin/watchlist', { method: 'POST' }); n.textContent = r.ok ? 'Pulling — new films will start downloading shortly.' : 'Radarr did not accept that.'; } catch (e) { n.textContent = e.message; } };
+$('#s-name-save').onclick = () => applySettings({ name: $('#s-name').value }, $('#s-name-note'));
+$('#s-add-btn').onclick = () => { const v = $('#s-add').value; if (v) applySettings({ add_source: v }, $('#s-src-note')); };
+$('#s-sources').addEventListener('click', (e) => { const b = e.target.closest('[data-src]'); if (!b) return; const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); applySettings({ sources: { [b.dataset.src]: on } }, $('#s-src-note')); });
 document.addEventListener('click', (e) => {
   if (!e.target.closest('#menu, #me')) $('#menu').hidden = true;
   if (!e.target.closest('#countries, #country-btn')) { $('#countries').hidden = true; $('#country-btn').setAttribute('aria-expanded', 'false'); }
@@ -400,8 +431,8 @@ function playFilm(f) {
 }
 document.addEventListener('keydown', (e) => {
   const typing = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
-  if (e.key === 'Escape') { closeFilm(); $('#menu').hidden = true; $('#countries').hidden = true; }
-  if (typing || e.metaKey || e.ctrlKey) return;
+  if (e.key === 'Escape') { closeFilm(); closeSettings(); $('#menu').hidden = true; $('#countries').hidden = true; }
+  if (typing || e.metaKey || e.ctrlKey || !$('#settings').hidden) return;
   if (e.key.toLowerCase() === 'r') randomFilm();
   if (e.key.toLowerCase() === 'g') setView(view === 'grid' ? 'reel' : 'grid');
 });

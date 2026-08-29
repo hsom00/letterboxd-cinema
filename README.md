@@ -25,7 +25,7 @@ The installer asks about the machine — folders, timezone, LAN or public, GPU, 
 
 Then open `http://localhost`. Your first visit is a short onboarding in the cinema's own design: name it, create your account, give your Letterboxd username, choose where films may come from. On "Set up my cinema" everything is wired together over the services' APIs — Jellyfin account and Movies library, Radarr to Transmission with hard-linking and a size ceiling per quality, Prowlarr to Radarr, your watchlist as the shopping list — and you sign in. Nothing else to configure; the projection booth (Radarr, Prowlarr, Transmission at `localhost:7878`, `:9696`, `:9091`) is there if you ever want it, reachable only from the machine itself.
 
-Anything you add to your Letterboxd watchlist turns up in the cinema.
+Anything you add to your Letterboxd watchlist turns up in the cinema. Admins get a **Settings** pane from the account menu: look for new films now, pull the watchlist now, see what's downloading, switch sources on and off or add more, rename the cinema, and links into the projection booth.
 
 ## Remote access
 
@@ -56,7 +56,6 @@ scripts/                    installers
 
 - **Installer, properly.** The two shell scripts are a stopgap and have already bitten twice. Replace them with one cross-platform installer (Python, or a tiny Go binary) that: checks Docker is running and ports 80/443 are free before asking anything, expands `~`, validates paths and timezone, warns about disk space, can be re-run safely, supports a non-interactive mode for scripted installs, and prints a clear "what next" at the end. Consider moving the machine questions into the browser too, leaving the installer with nothing to ask.
 
-- **Settings pane** (admins), in the cinema's design: force a library scan, pull the Letterboxd watchlist now, see what's downloading, rename the cinema, manage sources, links into the projection booth. The "Look for new films" menu item is the first sliver of this.
 - Intel / AMD transcoding overlays; pinned image versions and a release cadence.
 
 ## Licence

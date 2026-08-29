@@ -136,8 +136,81 @@ def remove_film(tmdb_id):
     out["radarr"] = "deleted"
     return out
 
+# ---------- admin settings ----------
+PK = os.environ.get("PROWLARR_API_KEY", "")
+PROWLARR_URL = os.environ.get("PROWLARR_URL", "http://prowlarr:9696")
+
+def admin_state():
+    st = settings(); RH = {"X-Api-Key": RADARR_KEY}; PH = {"X-Api-Key": PK}
+    out = {"name": app_name(), "letterboxd_user": st.get("letterboxd_user", ""), "sources": [], "available": [], "queue": [], "lists": []}
+    try:
+        _, idx = provision.call("GET", f"{PROWLARR_URL}/api/v1/indexer", headers=PH)
+        out["sources"] = [{"id": i["id"], "name": i.get("name"), "enabled": bool(i.get("enable")), "privacy": i.get("privacy"), "definition": i.get("definitionName")} for i in (idx if isinstance(idx, list) else [])]
+        have = {x["definition"] for x in out["sources"]}
+        out["available"] = [a for a in provision.prowlarr_public_indexers() if a["id"] not in have]
+    except Exception as e: out["sources_error"] = str(e)
+    try:
+        _, q = provision.call("GET", f"{RADARR_URL}/api/v3/queue?pageSize=50&includeMovie=true", headers=RH)
+        for r in (q or {}).get("records", []) if isinstance(q, dict) else []:
+            size, left = r.get("size") or 0, r.get("sizeleft") or 0
+            out["queue"].append({"title": (r.get("movie") or {}).get("title") or r.get("title"), "year": (r.get("movie") or {}).get("year"),
+                                 "status": r.get("status"), "state": r.get("trackedDownloadState"), "pct": round((size - left) / size * 100) if size else 0,
+                                 "gb": round(size / 1e9, 1), "eta": r.get("timeleft"), "warning": next((m.get("title") for m in r.get("statusMessages", []) if m.get("title")), None)})
+        _, lists = provision.call("GET", f"{RADARR_URL}/api/v3/importlist", headers=RH)
+        out["lists"] = [{"id": l["id"], "name": l.get("name"), "url": next((f.get("value") for f in l.get("fields", []) if f.get("name") == "url"), "")} for l in (lists if isinstance(lists, list) else [])]
+    except Exception as e: out["queue_error"] = str(e)
+    return out
+
+def admin_apply(body):
+    """Apply settings changes from the pane. Returns a list of human lines."""
+    st = settings(); lines = []
+    if "name" in body and body["name"].strip() and body["name"].strip() != st.get("name"):
+        st["name"] = body["name"].strip()[:40]; lines.append(f"Renamed to {st['name']}")
+    if "letterboxd_user" in body:
+        new = (body["letterboxd_user"] or "").strip().strip("/")
+        if new != st.get("letterboxd_user", ""):
+            RH = {"X-Api-Key": RADARR_KEY}
+            _, lists = provision.call("GET", f"{RADARR_URL}/api/v3/importlist", headers=RH)
+            for l in (lists if isinstance(lists, list) else []):
+                if "letterboxd-list:5000" in json.dumps(l.get("fields", [])) and "/watchlist/" in json.dumps(l.get("fields", [])):
+                    provision.call("DELETE", f"{RADARR_URL}/api/v3/importlist/{l['id']}", headers=RH)
+            st["letterboxd_user"] = new
+            if new:
+                provision.LOG.clear(); provision.radarr_import_list(new, None); lines += provision.LOG
+            else: lines.append("Letterboxd watchlist removed")
+    if "sources" in body and isinstance(body["sources"], dict):
+        PH = {"X-Api-Key": PK}
+        for sid, enabled in body["sources"].items():
+            code, i = provision.call("GET", f"{PROWLARR_URL}/api/v1/indexer/{sid}", headers=PH)
+            if code == 200 and isinstance(i, dict) and bool(i.get("enable")) != bool(enabled):
+                i["enable"] = bool(enabled)
+                c2, _ = provision.call("PUT", f"{PROWLARR_URL}/api/v1/indexer/{sid}?forceSave=true", i, PH)
+                lines.append(f"{i.get('name')}: {'on' if enabled else 'off'}" if c2 < 300 else f"{i.get('name')}: could not change")
+        provision.call("POST", f"{PROWLARR_URL}/api/v1/command", {"name": "ApplicationIndexerSync"}, PH)
+    if body.get("add_source"):
+        provision.LOG.clear(); provision.prowlarr([body["add_source"]]); lines += [l for l in provision.LOG if "source" in l]
+    os.makedirs(os.path.dirname(SETTINGS_PATH), exist_ok=True)
+    json.dump(st, open(SETTINGS_PATH, "w"))
+    return lines or ["Nothing to change"]
+
 class Handler(BaseHTTPRequestHandler):
+    def admin_only(self):
+        token = self.headers.get("X-Jellyfin-Token", "")
+        ok, me = jellyfin_is_admin(token)
+        if not ok: self.reply(403, {"error": "administrators only"}); return None
+        return token
+
     def do_POST(self):
+        if self.path.rstrip("/") == "/api/admin/settings":
+            if not self.admin_only(): return
+            try: body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0)) or 0) or b"{}")
+            except Exception: return self.reply(400, {"error": "bad request"})
+            try: return self.reply(200, {"ok": True, "log": admin_apply(body)}, cache=False)
+            except Exception as e: return self.reply(500, {"error": str(e)})
+        if self.path.rstrip("/") == "/api/admin/watchlist":
+            if not self.admin_only(): return
+            code, _ = provision.call("POST", f"{RADARR_URL}/api/v3/command", {"name": "ImportListSync"}, {"X-Api-Key": RADARR_KEY})
+            return self.reply(200 if code < 300 else 500, {"ok": code < 300}, cache=False)
         if self.path.rstrip("/") == "/api/setup":
             return self.onboard()
         if self.path.rstrip("/") == "/api/admin/scan":
@@ -180,6 +253,9 @@ class Handler(BaseHTTPRequestHandler):
         self.reply(200, {"ok": True, "log": lines})
 
     def do_GET(self):
+        if self.path.rstrip("/") == "/api/admin/settings":
+            if not self.admin_only(): return
+            return self.reply(200, admin_state(), cache=False)
         if self.path.rstrip("/") == "/api/config":
             return self.reply(200, {"name": app_name(), "setup": setup_needed()}, cache=False)
         if self.path.rstrip("/") == "/api/setup/sources":

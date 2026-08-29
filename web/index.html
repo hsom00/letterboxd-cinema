@@ -103,13 +103,57 @@
 
 <div class="film" id="film" role="dialog" aria-modal="true" aria-labelledby="film-title"></div>
 
+<div class="settings" id="settings" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+  <button class="close" id="settings-close">Close <span aria-hidden="true">✕</span></button>
+  <div class="s-inner">
+    <span class="label">Projection booth</span>
+    <h1 id="settings-title">Settings</h1>
+
+    <section>
+      <h2>Library</h2>
+      <p>New films are picked up every fifteen minutes, and the moment Radarr finishes one. Or now:</p>
+      <div class="row"><button class="btn ghost" id="s-scan">Look for new films</button><span class="s-note" id="s-scan-note"></span></div>
+    </section>
+
+    <section>
+      <h2>Letterboxd</h2>
+      <p>Films added to this watchlist are found and fetched on their own.</p>
+      <div class="row"><label class="s-field"><span class="label">Username</span><input id="s-lb" type="text" placeholder="letterboxd.com/…"></label>
+        <button class="btn ghost" id="s-lb-save">Save</button><button class="btn ghost" id="s-lb-pull">Pull watchlist now</button><span class="s-note" id="s-lb-note"></span></div>
+    </section>
+
+    <section>
+      <h2>Downloading</h2>
+      <ul class="s-queue" id="s-queue"><li class="s-empty">Nothing downloading.</li></ul>
+    </section>
+
+    <section>
+      <h2>Sources</h2>
+      <p>Where the cinema may search for films. Switch any off, or add more of the public ones it knows about.</p>
+      <ul class="s-sources" id="s-sources"></ul>
+      <div class="row"><select id="s-add" class="s-select"><option value="">Add a source…</option></select><button class="btn ghost" id="s-add-btn">Add</button><span class="s-note" id="s-src-note"></span></div>
+    </section>
+
+    <section>
+      <h2>Name</h2>
+      <div class="row"><label class="s-field"><span class="label">On the marquee</span><input id="s-name" type="text" maxlength="40"></label><button class="btn ghost" id="s-name-save">Save</button><span class="s-note" id="s-name-note"></span></div>
+    </section>
+
+    <section>
+      <h2>The booth itself</h2>
+      <p>The machinery, reachable only from the computer the cinema runs on.</p>
+      <div class="s-links"><a href="http://localhost:7878" target="_blank" rel="noopener">Radarr</a><a href="http://localhost:9696" target="_blank" rel="noopener">Prowlarr</a><a href="http://localhost:9091" target="_blank" rel="noopener">Transmission</a><a href="/web/" target="_blank" rel="noopener">Jellyfin</a></div>
+    </section>
+  </div>
+</div>
+
 <div class="menu" id="menu" hidden>
   <div class="menu-group" role="group" aria-label="Start with">
     <span class="label">Start with</span>
     <button data-start="newest" aria-pressed="true">Newest first</button>
     <button data-start="random">A random film</button>
   </div>
-  <button id="rescan" hidden>Look for new films</button>
+  <button id="open-settings" hidden>Settings</button>
   <a href="/web/index.html#/home.html">Open Jellyfin</a>
   <button id="signout">Sign out</button>
 </div>
