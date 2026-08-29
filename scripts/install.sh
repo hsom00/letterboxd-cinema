@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Letterboxd Cinema installer (Linux / macOS). Run from the repo folder:  bash scripts/install.sh
-set -euo pipefail
+set -u
 cd "$(dirname "$0")/.."
 
 ask() { local v; read -r -p "$1${2:+ [$2]}: " v; echo "${v:-$2}"; }
@@ -34,12 +34,13 @@ http_port=$(ask "Web port (80 unless something else is using it)" "80")
 if [ "$http_port" = 80 ]; then https_port=443; disc_port=7359; peer_port=51413
 else https_port=$(ask "HTTPS port" "8443"); disc_port=$(ask "Jellyfin discovery port (UDP)" "7360"); peer_port=$(ask "Torrent peer port" "51414"); fi
 # reuse keys already baked into an existing install, otherwise generate
-existing_key() { [ -f "$1" ] && sed -n 's|.*<ApiKey>\([^<]*\)</ApiKey>.*|\1|p' "$1" | head -1; }
+existing_key() { if [ -f "$1" ]; then sed -n 's|.*<ApiKey>\([^<]*\)</ApiKey>.*|\1|p' "$1" | head -1; fi; return 0; }
 radarr_key=$(existing_key "$config/radarr/config.xml"); radarr_key=${radarr_key:-$(newkey)}
 prowlarr_key=$(existing_key "$config/prowlarr/config.xml"); prowlarr_key=${prowlarr_key:-$(newkey)}
 
 mkdir -p "$media"/{movies,downloads/complete,downloads/incomplete} \
-         "$config"/{radarr,prowlarr,transmission,jellyfin/config,jellyfin-cache,helper,caddy/data,caddy/config}
+         "$config"/{radarr,prowlarr,transmission,jellyfin/config,jellyfin-cache,helper,caddy/data,caddy/config} \
+  || { echo "Could not create folders under $media / $config — check the paths and permissions."; exit 1; }
 
 arr() { printf '<Config>\n  <ApiKey>%s</ApiKey>\n  <AuthenticationMethod>Forms</AuthenticationMethod>\n  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>\n  <BindAddress>*</BindAddress>\n  <Port>%s</Port>\n  <UrlBase></UrlBase>\n  <AnalyticsEnabled>False</AnalyticsEnabled>\n</Config>\n' "$1" "$2"; }
 [ -f "$config/radarr/config.xml" ]   || arr "$radarr_key" 7878   > "$config/radarr/config.xml"
@@ -58,7 +59,7 @@ if [ "$gpu" = nvidia ] && [ ! -f "$config/jellyfin/config/encoding.xml" ]; then 
 } > .env
 
 echo; echo "Starting…"
-docker compose up -d --build
+docker compose up -d --build || { echo; echo "Docker reported a problem starting the stack (see above). Fix it and run: docker compose up -d --build"; exit 1; }
 echo
 if [ "$mode" = public ]; then echo "Done. Forward TCP 80 and 443 on your router to this machine, then open https://$site"
 else echo "Done. Open http://localhost${http_port:+$( [ "$http_port" != 80 ] && echo ":$http_port")} (or this machine's IP from another device on your network)."; fi
