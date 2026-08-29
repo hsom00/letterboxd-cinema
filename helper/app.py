@@ -139,7 +139,7 @@ def remove_film(tmdb_id):
 class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path.rstrip("/") == "/api/setup":
-            return self.setup()
+            return self.onboard()
         m = re.fullmatch(r"/api/admin/remove/(\d+)/?", self.path)
         if not m: return self.reply(404, {"error": "unknown action"})
         token = self.headers.get("X-Jellyfin-Token", "")
@@ -155,7 +155,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             self.reply(500, {"error": str(e)})
 
-    def setup(self):
+    def onboard(self):
         """Onboarding: only while no admin account exists. Saves settings, then provisions everything."""
         if not setup_needed(): return self.reply(403, {"error": "already set up"})
         try: body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0)) or 0) or b"{}")
