@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Letterboxd Cinema installer (Linux / macOS). Run from the repo folder:  ./scripts/install.sh
+# Letterboxd Cinema installer (Linux / macOS). Run from the repo folder:  bash scripts/install.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

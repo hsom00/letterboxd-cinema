@@ -18,7 +18,7 @@ Under the hood it's Jellyfin, Radarr, Prowlarr and Transmission, pre-wired so yo
 git clone https://github.com/hsom00/letterboxd-cinema
 cd letterboxd-cinema
 .\scripts\install.ps1        # Windows
-./scripts/install.sh         # macOS / Linux
+bash scripts/install.sh      # macOS / Linux
 ```
 
 The installer asks about the machine — folders, timezone, LAN or public, GPU, ports — writes `.env`, pre-seeds every service's settings, and starts the stack. First start pulls the images and takes a few minutes.
