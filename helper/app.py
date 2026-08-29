@@ -9,8 +9,19 @@ fetched at most once a week, which keeps this polite and fast.
 """
 import json, os, re, sys, time, threading, urllib.request, urllib.error
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import provision  # the same code the one-shot provisioner runs; here it runs when the onboarding wizard is submitted
 
 CACHE_PATH = os.environ.get("CACHE_PATH", "/data/cache.json")
+SETTINGS_PATH = os.environ.get("SETTINGS_PATH", "/data/settings.json")
+setup_lock = threading.Lock()
+
+def settings():
+    try: return json.load(open(SETTINGS_PATH))
+    except Exception: return {}
+def app_name(): return settings().get("name") or os.environ.get("APP_NAME", "Cinema")
+def setup_needed():
+    """True until an admin account exists: Jellyfin still on its startup wizard, or no settings saved yet."""
+    return provision.jellyfin_needs_setup() or not settings().get("admin_user")
 TTL_HIT, TTL_MISS = 7 * 86400, 86400
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 lock = threading.Lock()
@@ -127,6 +138,8 @@ def remove_film(tmdb_id):
 
 class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
+        if self.path.rstrip("/") == "/api/setup":
+            return self.setup()
         m = re.fullmatch(r"/api/admin/remove/(\d+)/?", self.path)
         if not m: return self.reply(404, {"error": "unknown action"})
         token = self.headers.get("X-Jellyfin-Token", "")
@@ -142,19 +155,41 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             self.reply(500, {"error": str(e)})
 
+    def setup(self):
+        """Onboarding: only while no admin account exists. Saves settings, then provisions everything."""
+        if not setup_needed(): return self.reply(403, {"error": "already set up"})
+        try: body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0)) or 0) or b"{}")
+        except Exception: return self.reply(400, {"error": "bad request"})
+        name, user, pw = (body.get("name") or "").strip(), (body.get("admin_user") or "").strip(), body.get("admin_password") or ""
+        if not (name and user and pw): return self.reply(400, {"error": "name, username and password are required"})
+        with setup_lock:
+            if not setup_needed(): return self.reply(403, {"error": "already set up"})
+            data = {"name": name, "admin_user": user, "admin_password": pw,
+                    "letterboxd_user": (body.get("letterboxd_user") or "").strip().strip("/"),
+                    "indexers": [x for x in body.get("indexers") or [] if isinstance(x, str)][:20], "at": time.time()}
+            os.makedirs(os.path.dirname(SETTINGS_PATH), exist_ok=True)
+            json.dump(data, open(SETTINGS_PATH, "w"))
+            try: lines = provision.run()
+            except Exception as e: lines = [f"Setup hit a problem: {e}"]
+        self.reply(200, {"ok": True, "log": lines})
+
     def do_GET(self):
         if self.path.rstrip("/") == "/api/config":
-            return self.reply(200, {"name": os.environ.get("APP_NAME", "Cinema")})
+            return self.reply(200, {"name": app_name(), "setup": setup_needed()}, cache=False)
+        if self.path.rstrip("/") == "/api/setup/sources":
+            if not setup_needed(): return self.reply(403, {"error": "already set up"})
+            try: return self.reply(200, {"sources": provision.prowlarr_public_indexers()}, cache=False)
+            except Exception as e: return self.reply(200, {"sources": [], "error": str(e)}, cache=False)
         m = re.fullmatch(r"/(?:api/letterboxd/)?(\d+)/?", self.path)
         if self.path == "/health":
             return self.reply(200, {"ok": True, "cached": len(cache)})
         if not m: return self.reply(404, {"error": "expected /<tmdb id>"})
         data = lookup(m.group(1))
         self.reply(200 if data else 404, data or {"rating": None})
-    def reply(self, code, obj):
+    def reply(self, code, obj, cache=True):
         body = json.dumps(obj).encode()
         self.send_response(code); self.send_header("Content-Type", "application/json")
-        self.send_header("Cache-Control", "public, max-age=3600"); self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "public, max-age=3600" if cache else "no-store"); self.send_header("Content-Length", str(len(body)))
         self.end_headers(); self.wfile.write(body)
     def log_message(self, fmt, *args): print(self.address_string(), fmt % args, file=sys.stderr)
 

@@ -21,13 +21,11 @@ cd letterboxd-cinema
 ./scripts/install.sh         # macOS / Linux
 ```
 
-The installer asks a few questions — name, folders, timezone, LAN or public, GPU, the account you'll sign in with, your Letterboxd username — writes `.env`, pre-seeds every service's settings, and starts the stack. First start pulls the images and takes a few minutes.
+The installer asks about the machine — folders, timezone, LAN or public, GPU, ports — writes `.env`, pre-seeds every service's settings, and starts the stack. First start pulls the images and takes a few minutes.
 
-A provisioner then runs in the background and does the rest over the services' APIs: creates your Jellyfin account and Movies library (with several backdrops per film), wires Radarr to Transmission with hard-linking, sensible naming, a size ceiling per quality and no remuxes, links Prowlarr to Radarr, tells Radarr to nudge Jellyfin when a film lands, and turns your Letterboxd watchlist into Radarr's shopping list. `docker compose logs provision` shows what it did; it's safe to run again at any time.
+Then open `http://localhost`. Your first visit is a short onboarding in the cinema's own design: name it, create your account, give your Letterboxd username, choose where films may come from. On "Set up my cinema" everything is wired together over the services' APIs — Jellyfin account and Movies library, Radarr to Transmission with hard-linking and a size ceiling per quality, Prowlarr to Radarr, your watchlist as the shopping list — and you sign in. Nothing else to configure; the projection booth (Radarr, Prowlarr, Transmission at `localhost:7878`, `:9696`, `:9091`) is there if you ever want it, reachable only from the machine itself.
 
-Open `http://localhost` and sign in. That's your cinema. Anything you add to your Letterboxd watchlist turns up in it.
-
-The one thing it can't do for you is choose where films come from: add indexers in Prowlarr (`http://localhost:9696`) or list public ones in `DEFAULT_INDEXERS` in `.env` before first start. Radarr, Prowlarr and Transmission are only reachable from the machine itself; the cinema is what you share.
+Anything you add to your Letterboxd watchlist turns up in the cinema.
 
 ## Remote access
 
@@ -56,7 +54,6 @@ scripts/                    installers
 
 ## Roadmap
 
-- **Onboarding**: a first-run wizard in the cinema's own design — name, admin account, Letterboxd username — replacing Jellyfin's.
 - Intel / AMD transcoding overlays; pinned image versions and a release cadence.
 
 ## Licence

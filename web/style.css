@@ -65,6 +65,30 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .login .btn { justify-self: start; margin-top: 6px; }
 .err { color: var(--ink-2); font-size: 13px; margin: 0; }
 
+/* ---------- onboarding ---------- */
+.setup { min-height: 100svh; display: grid; place-items: center; padding: 24px; }
+.setup form { display: grid; gap: 22px; width: min(440px, 100%); }
+.setup .wordmark { margin-bottom: 6px; }
+.steps { display: flex; gap: 6px; list-style: none; margin: 0 0 10px; padding: 0; }
+.steps li { width: 22px; height: 1px; background: var(--rule); }
+.steps li.done, .steps li.now { background: var(--ink-2); }
+.setup fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 16px; }
+.setup h1 { font-family: var(--display); font-weight: 400; font-size: 30px; margin: 0; line-height: 1.15; }
+.setup p { margin: -6px 0 0; color: var(--ink-2); font-size: 14.5px; font-weight: 300; max-width: 44ch; line-height: 1.55; }
+.setup label { display: grid; gap: 8px; }
+.setup input[type="text"], .setup input[type="password"] { background: none; border: 0; border-bottom: 1px solid var(--rule); color: var(--ink); font: inherit; font-size: 16px; padding: 8px 0; }
+.setup input:focus { outline: none; border-bottom-color: var(--ink-2); }
+.setup-nav { display: flex; gap: 10px; margin-top: 4px; }
+.sources { display: grid; gap: 2px; max-height: 44vh; overflow-y: auto; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 6px 0; }
+.sources label { display: grid; grid-template-columns: 18px 1fr; gap: 12px; align-items: baseline; padding: 8px 4px; border-radius: 4px; cursor: pointer; }
+.sources label:hover { background: rgba(255,255,255,.04); }
+.sources input { accent-color: var(--ink); margin: 0; }
+.sources .n { font-size: 14px; }
+.sources .d { display: block; color: var(--ink-3); font-size: 12.5px; font-weight: 300; }
+.setup-log { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13.5px; color: var(--ink-2); }
+.setup-log li::before { content: "· "; color: var(--ink-3); }
+.setup-log li.busy { color: var(--ink-3); }
+
 /* ---------- heroic panels ---------- */
 .reel { height: 100vh; height: 100svh; overflow-y: auto; scroll-snap-type: y mandatory; overscroll-behavior-y: contain; scrollbar-width: none; }
 .reel::-webkit-scrollbar { display: none; }

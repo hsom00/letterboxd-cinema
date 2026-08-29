@@ -258,12 +258,65 @@ function makeGrain() {
 }
 
 /* ---------- boot ---------- */
+let config = {};
 async function loadConfig() {
-  try { const c = await (await fetch('/api/config')).json(); if (c.name) { document.title = c.name; document.querySelectorAll('.js-name').forEach(el => el.textContent = c.name); } } catch {}
+  try { config = await (await fetch('/api/config', { cache: 'no-store' })).json(); } catch {}
+  if (config.name) { document.title = config.name; document.querySelectorAll('.js-name').forEach(el => el.textContent = config.name); }
 }
+
+/* ---------- onboarding (first visit only) ---------- */
+const wizard = { step: 1, data: {} };
+function showStep(n) {
+  wizard.step = n;
+  document.querySelectorAll('#setup-form fieldset').forEach(f => f.hidden = +f.dataset.step !== n);
+  document.querySelectorAll('#steps li').forEach((li, i) => { li.classList.toggle('done', i + 1 < n); li.classList.toggle('now', i + 1 === n); });
+  $('#setup-back').hidden = n === 1 || n === 5;
+  $('#setup-next').hidden = n === 5;
+  $('#setup-next').textContent = n === 4 ? 'Set up my cinema' : 'Continue';
+  $('#setup-err').hidden = true;
+  const first = document.querySelector(`#setup-form fieldset[data-step="${n}"] input[type="text"], #setup-form fieldset[data-step="${n}"] input[type="password"]`); first?.focus();
+  if (n === 4) loadSources();
+}
+async function loadSources() {
+  const box = $('#sources'); if (box.dataset.loaded) return;
+  try {
+    const d = await (await fetch('/api/setup/sources', { cache: 'no-store' })).json();
+    box.innerHTML = d.sources?.length ? d.sources.map(s => `<label><input type="checkbox" name="indexers" value="${esc(s.id)}"><span><span class="n">${esc(s.name)}</span><span class="d">${esc(s.description)}</span></span></label>`).join('')
+      : `<span class="label">None available yet — you can add sources later.</span>`;
+    box.dataset.loaded = '1';
+  } catch { box.innerHTML = `<span class="label">Could not load sources — you can add them later.</span>`; }
+}
+async function runSetup() {
+  showStep(5);
+  const log = $('#setup-log'); log.innerHTML = '<li class="busy">Talking to the projection booth…</li>';
+  try {
+    const r = await fetch('/api/setup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(wizard.data) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || r.statusText);
+    log.innerHTML = (d.log || []).map(l => `<li>${esc(l)}</li>`).join('') + '<li>Done.</li>';
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = 'Enter'; b.style.marginTop = '10px';
+    b.onclick = () => { $('#setup').hidden = true; $('#login').hidden = false; $('#login-form').user.value = wizard.data.admin_user; $('#login-form').pass.focus(); loadConfig(); };
+    $('#setup-form').appendChild(b); b.focus();
+  } catch (e) { log.innerHTML = `<li>Something went wrong: ${esc(e.message)}</li>`; $('#setup-back').hidden = false; }
+}
+$('#setup-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const f = new FormData(e.target); const err = (m) => { $('#setup-err').textContent = m; $('#setup-err').hidden = false; };
+  if (wizard.step === 1) { const v = (f.get('name') || '').trim(); if (!v) return err('Give it a name.'); wizard.data.name = v; return showStep(2); }
+  if (wizard.step === 2) {
+    const u = (f.get('admin_user') || '').trim(), p = f.get('admin_password') || '';
+    if (!u) return err('Choose a username.'); if (p.length < 8) return err('Use a password of at least 8 characters — this account can be reached from the internet.');
+    wizard.data.admin_user = u; wizard.data.admin_password = p; return showStep(3);
+  }
+  if (wizard.step === 3) { wizard.data.letterboxd_user = (f.get('letterboxd_user') || '').trim().replace(/^.*letterboxd\.com\//, '').replace(/\/.*$/, ''); return showStep(4); }
+  if (wizard.step === 4) { wizard.data.indexers = f.getAll('indexers'); return runSetup(); }
+});
+$('#setup-back').onclick = () => showStep(Math.max(1, wizard.step - 1));
+
 async function start() {
   document.documentElement.style.setProperty('--grain', makeGrain());
-  loadConfig();
+  await loadConfig();
+  if (config.setup) { $('#setup').hidden = false; showStep(1); return; }
   if (!session) { $('#login').hidden = false; return; }
   $('#bar').hidden = false; $('#me').textContent = session.userName[0].toUpperCase();
   api('/Users/Me').then(me => { session.admin = !!me?.Policy?.IsAdministrator; }).catch(() => {});

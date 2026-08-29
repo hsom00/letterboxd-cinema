@@ -31,6 +31,50 @@
   </div>
 </header>
 
+<section class="setup" id="setup" hidden>
+  <form id="setup-form" autocomplete="off">
+    <div class="wordmark">Letterboxd Cinema</div>
+    <ol class="steps" id="steps" aria-hidden="true"><li></li><li></li><li></li><li></li></ol>
+
+    <fieldset data-step="1">
+      <h1>Name your cinema</h1>
+      <p>It goes on the marquee — the wordmark at the top of every page.</p>
+      <label><span class="label">Name</span><input name="name" type="text" required maxlength="40" placeholder="e.g. The Bijou"></label>
+    </fieldset>
+
+    <fieldset data-step="2" hidden>
+      <h1>Your account</h1>
+      <p>This is the account you sign in with, on every device. It also runs the projection booth.</p>
+      <label><span class="label">Username</span><input name="admin_user" type="text" autocomplete="username" maxlength="40"></label>
+      <label><span class="label">Password</span><input name="admin_password" type="password" autocomplete="new-password" minlength="8"></label>
+    </fieldset>
+
+    <fieldset data-step="3" hidden>
+      <h1>Your Letterboxd</h1>
+      <p>Films you add to your Letterboxd watchlist are found, fetched and shelved here on their own. Optional — you can add it later.</p>
+      <label><span class="label">Letterboxd username</span><input name="letterboxd_user" type="text" placeholder="as in letterboxd.com/username"></label>
+    </fieldset>
+
+    <fieldset data-step="4" hidden>
+      <h1>Where films come from</h1>
+      <p>Choose the sources the cinema may search. These are the public ones it knows about; you can change this any time in the projection booth.</p>
+      <div class="sources" id="sources"><span class="label">Loading…</span></div>
+    </fieldset>
+
+    <fieldset data-step="5" hidden>
+      <h1>Setting up</h1>
+      <p>Wiring everything together. This takes a minute or two.</p>
+      <ul class="setup-log" id="setup-log"></ul>
+    </fieldset>
+
+    <div class="setup-nav">
+      <button type="button" class="btn ghost" id="setup-back" hidden>Back</button>
+      <button type="submit" class="btn" id="setup-next">Continue</button>
+    </div>
+    <p class="err" id="setup-err" hidden></p>
+  </form>
+</section>
+
 <section class="login" id="login" hidden>
   <form id="login-form">
     <div class="wordmark js-name">Cinema</div>

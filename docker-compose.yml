@@ -8,6 +8,9 @@
 # Optional overlays (set in .env):
 #   COMPOSE_PROFILES=public          adds Cloudflare dynamic DNS for a public domain
 #   COMPOSE_FILE=docker-compose.yml:docker-compose.nvidia.yml   NVIDIA GPU transcoding for Jellyfin
+#   HTTP_PORT / HTTPS_PORT / PEER_PORT / DISCOVERY_PORT           change if something else already uses 80/443/51413/7359
+#
+# Two installs can run side by side (e.g. a test next to a live one): give each its own folder, ports and CONFIG_PATH.
 
 x-common: &common
   restart: unless-stopped
@@ -21,7 +24,6 @@ services:
   prowlarr:
     <<: *common
     image: lscr.io/linuxserver/prowlarr:latest
-    container_name: prowlarr
     volumes:
       - ${CONFIG_PATH}/prowlarr:/config
     ports:
@@ -30,7 +32,6 @@ services:
   radarr:
     <<: *common
     image: lscr.io/linuxserver/radarr:latest
-    container_name: radarr
     volumes:
       - ${CONFIG_PATH}/radarr:/config
       - ${MEDIA_PATH}:/data
@@ -40,19 +41,17 @@ services:
   transmission:
     <<: *common
     image: lscr.io/linuxserver/transmission:latest
-    container_name: transmission
     volumes:
       - ${CONFIG_PATH}/transmission:/config
       - ${MEDIA_PATH}:/data
     ports:
       - "127.0.0.1:9091:9091"
-      - "51413:51413"
-      - "51413:51413/udp"
+      - "${PEER_PORT:-51413}:51413"
+      - "${PEER_PORT:-51413}:51413/udp"
 
   decluttarr:
     <<: *common
     image: ghcr.io/manimatter/decluttarr:latest
-    container_name: decluttarr
     env_file: .env
     volumes:
       - ./config/decluttarr.yaml:/app/config/config.yaml:ro
@@ -62,7 +61,6 @@ services:
   letterboxd-list:
     restart: unless-stopped
     image: screeny05/letterboxd-list-radarr:latest
-    container_name: letterboxd-list
     environment:
       REDIS_URL: redis://letterboxd-list-redis:6379
       PORT: "5000"
@@ -71,14 +69,12 @@ services:
   letterboxd-list-redis:
     restart: unless-stopped
     image: redis:7-alpine
-    container_name: letterboxd-list-redis
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save ""
 
   # ---------- the cinema ----------
   jellyfin:
     restart: unless-stopped
     image: jellyfin/jellyfin:latest
-    container_name: jellyfin
     environment:
       TZ: ${TZ:-Europe/London}
     volumes:
@@ -87,13 +83,14 @@ services:
       - ${MEDIA_PATH}:/data:ro
     ports:
       - "127.0.0.1:8096:8096"
-      - "7359:7359/udp"
+      - "${DISCOVERY_PORT:-7359}:7359/udp"
 
   # Letterboxd ratings/countries, app config, and admin actions that need server-side secrets
   helper:
     restart: unless-stopped
-    build: ./helper
-    container_name: helper
+    build:
+      context: .
+      dockerfile: helper/Dockerfile
     env_file: .env
     environment:
       APP_NAME: ${APP_NAME:-Cinema}
@@ -103,7 +100,6 @@ services:
   caddy:
     restart: unless-stopped
     image: caddy:2
-    container_name: caddy
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-:80}
     volumes:
@@ -112,14 +108,13 @@ services:
       - ${CONFIG_PATH}/caddy/data:/data
       - ${CONFIG_PATH}/caddy/config:/config
     ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
 
   # One-shot: configures Radarr, Prowlarr and Jellyfin over their APIs on every `up` (safe to re-run)
   provision:
     build: ./provision
-    container_name: provision
     env_file: .env
     volumes:
       - ${CONFIG_PATH}/helper:/data
@@ -130,7 +125,6 @@ services:
   ddns:
     restart: unless-stopped
     image: favonia/cloudflare-ddns:latest
-    container_name: ddns
     profiles: ["public"]
     env_file: .env
     environment:
@@ -142,7 +136,6 @@ services:
   watchtower:
     restart: unless-stopped
     image: nickfedor/watchtower:latest
-    container_name: watchtower
     environment:
       TZ: ${TZ:-Europe/London}
       WATCHTOWER_SCHEDULE: "0 0 4 * * 1"

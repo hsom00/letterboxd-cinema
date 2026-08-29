@@ -28,6 +28,9 @@
 	handle /api/config {
 		reverse_proxy helper:8080
 	}
+	handle /api/setup* {
+		reverse_proxy helper:8080
+	}
 	handle /api/admin/* {
 		reverse_proxy helper:8080
 	}

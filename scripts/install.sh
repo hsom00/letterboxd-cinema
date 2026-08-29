@@ -10,7 +10,6 @@ command -v docker >/dev/null || { echo "Docker is not installed. Install Docker 
 [ -f .env ] && { echo ".env already exists — delete it to start over, or edit it directly."; exit 1; }
 
 echo; echo "  Letterboxd Cinema — setup"; echo
-name=$(ask "Name for your cinema (shown as the wordmark)" "Cinema")
 media=$(ask "Folder for films and downloads (will get movies/ and downloads/ inside)" "$HOME/media")
 config=$(ask "Folder for app settings and databases" "$HOME/cinema/config")
 tz=$(ask "Timezone" "$( (readlink /etc/localtime 2>/dev/null | sed 's|.*/zoneinfo/||') || echo Europe/London)")
@@ -21,9 +20,9 @@ if [ "$mode" = public ]; then
   cf=$(ask "Cloudflare API token with 'Edit zone DNS' for that domain" "")
 fi
 gpu=$(ask "GPU for transcoding: 'nvidia' or 'none'" "none")
-admin=$(ask "Username for your account" "$USER")
-pass=$(ask "Password for that account" "")
-lb=$(ask "Your Letterboxd username (optional — your watchlist becomes the shopping list)" "")
+http_port=$(ask "Web port (80 unless something else is using it)" "80")
+if [ "$http_port" = 80 ]; then https_port=443; disc_port=7359; else https_port=$(ask "HTTPS port" "8443"); disc_port=$(ask "Jellyfin discovery port (UDP)" "7360"); fi
+peer_port=$(ask "Torrent peer port" "51413")
 radarr_key=$(newkey); prowlarr_key=$(newkey)
 
 mkdir -p "$media"/{movies,downloads/complete,downloads/incomplete} \
@@ -36,11 +35,11 @@ arr() { printf '<Config>\n  <ApiKey>%s</ApiKey>\n  <AuthenticationMethod>Forms</
 if [ "$gpu" = nvidia ] && [ ! -f "$config/jellyfin/config/encoding.xml" ]; then cp config/jellyfin-encoding-nvenc.xml "$config/jellyfin/config/encoding.xml"; fi
 
 {
-  echo "APP_NAME=$name"; echo "MEDIA_PATH=$media"; echo "CONFIG_PATH=$config"; echo "TZ=$tz"
+  echo "APP_NAME=Cinema"; echo "MEDIA_PATH=$media"; echo "CONFIG_PATH=$config"; echo "TZ=$tz"
   echo "PUID=$(id -u)"; echo "PGID=$(id -g)"; echo "SITE_ADDRESS=$site"
   echo "RADARR_API_KEY=$radarr_key"; echo "PROWLARR_API_KEY=$prowlarr_key"
-  echo "JELLYFIN_ADMIN_USER=$admin"; echo "JELLYFIN_ADMIN_PASSWORD=$pass"; echo "LETTERBOXD_USER=$lb"
-  echo "DEFAULT_INDEXERS="; echo "MAX_MB_PER_MINUTE=150"; echo "SEED_RATIO=1.0"
+  echo "HTTP_PORT=$http_port"; echo "HTTPS_PORT=$https_port"; echo "PEER_PORT=$peer_port"; echo "DISCOVERY_PORT=$disc_port"
+  echo "MAX_MB_PER_MINUTE=150"; echo "SEED_RATIO=1.0"
   [ "$mode" = public ] && { echo "COMPOSE_PROFILES=public"; echo "CLOUDFLARE_API_TOKEN=$cf"; }
   [ "$gpu" = nvidia ] && echo "COMPOSE_FILE=docker-compose.yml:docker-compose.nvidia.yml"
 } > .env
@@ -49,5 +48,5 @@ echo; echo "Starting…"
 docker compose up -d --build
 echo
 if [ "$mode" = public ]; then echo "Done. Forward TCP 80 and 443 on your router to this machine, then open https://$site"
-else echo "Done. Open http://localhost (or http://<this machine's IP> from another device on your network)."; fi
-echo "Sign in with the account you just chose. Setup finishes in the background — 'docker compose logs provision' shows it."
+else echo "Done. Open http://localhost${http_port:+$( [ "$http_port" != 80 ] && echo ":$http_port")} (or this machine's IP from another device on your network)."; fi
+echo "Your first visit walks you through naming the cinema and creating your account."
