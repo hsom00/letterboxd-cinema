@@ -87,9 +87,13 @@ def http(method, url, body=None, headers=None, timeout=20):
         raw = r.read()
         return r.status, (json.loads(raw) if raw else None), dict(r.headers)
 
+def jf_auth(token):
+    """Jellyfin 12 only accepts the token inside an Authorization header (the old X-Emby-Token header gets a 401)."""
+    return {"Authorization": f'MediaBrowser Token="{token}"'}
+
 def jellyfin_is_admin(token):
     try:
-        _, me, _ = http("GET", f"{JELLYFIN_URL}/Users/Me", headers={"X-Emby-Token": token})
+        _, me, _ = http("GET", f"{JELLYFIN_URL}/Users/Me", headers=jf_auth(token))
         return bool(me and me.get("Policy", {}).get("IsAdministrator")), me
     except Exception:
         return False, None
@@ -216,7 +220,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.rstrip("/") == "/api/admin/scan":
             ok, _ = jellyfin_is_admin(self.headers.get("X-Jellyfin-Token", ""))
             if not ok: return self.reply(403, {"error": "administrators only"})
-            try: http("POST", f"{JELLYFIN_URL}/Library/Refresh", headers={"X-Emby-Token": self.headers.get("X-Jellyfin-Token", "")})
+            try: http("POST", f"{JELLYFIN_URL}/Library/Refresh", headers=jf_auth(self.headers.get("X-Jellyfin-Token", "")))
             except Exception as e: return self.reply(500, {"error": str(e)})
             return self.reply(200, {"ok": True}, cache=False)
         m = re.fullmatch(r"/api/admin/remove/(\d+)/?", self.path)
@@ -227,7 +231,7 @@ class Handler(BaseHTTPRequestHandler):
         if not RADARR_KEY: return self.reply(500, {"error": "RADARR_API_KEY not set"})
         try:
             result = remove_film(m.group(1))
-            try: http("POST", f"{JELLYFIN_URL}/Library/Refresh", headers={"X-Emby-Token": token})
+            try: http("POST", f"{JELLYFIN_URL}/Library/Refresh", headers=jf_auth(token))
             except Exception: pass
             print(f"REMOVE by {me.get('Name')}: {result}", file=sys.stderr)
             self.reply(200, result)

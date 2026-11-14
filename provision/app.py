@@ -198,7 +198,7 @@ def jellyfin(admin_user, admin_pass):
     if not (admin_user and admin_pass): return None
     code, auth = call("POST", f"{JELLYFIN}/Users/AuthenticateByName", {"Username": admin_user, "Pw": admin_pass}, H)
     if code != 200: log(f"Jellyfin: could not sign in as {admin_user} — library not checked"); return None
-    T = {"X-Emby-Token": auth["AccessToken"]}
+    T = {"Authorization": JF_AUTH + f', Token="{auth["AccessToken"]}"'}  # Jellyfin 12 no longer accepts the X-Emby-Token header
     # Library options: which providers to ask (silence here means "none" to Jellyfin), how many backdrops to keep.
     META, IMAGES = ["TheMovieDb", "The Open Movie Database"], ["TheMovieDb", "The Open Movie Database", "Screen Grabber"]
     type_opts = [{"Type": "Movie", "MetadataFetchers": META, "MetadataFetcherOrder": META, "ImageFetchers": IMAGES, "ImageFetcherOrder": IMAGES,

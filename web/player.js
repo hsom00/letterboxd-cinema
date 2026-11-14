@@ -117,7 +117,7 @@ const Player = (() => {
     src = info.MediaSources[0]; playSessionId = info.PlaySessionId;
     if (src.SupportsDirectPlay || src.SupportsDirectStream) {
       playMethod = src.SupportsDirectPlay ? 'DirectPlay' : 'DirectStream';
-      video.src = `/Videos/${film.id}/stream.${src.Container}?static=true&mediaSourceId=${src.Id}&api_key=${ctx.session.token}&playSessionId=${playSessionId}`;
+      video.src = `/Videos/${film.id}/stream.${src.Container}?static=true&mediaSourceId=${src.Id}&ApiKey=${ctx.session.token}&playSessionId=${playSessionId}`;
       video.currentTime = startSeconds;
     } else if (src.TranscodingUrl) {
       playMethod = 'Transcode';
@@ -145,7 +145,7 @@ const Player = (() => {
     [...video.querySelectorAll('track')].forEach(t => t.remove());
     subs.forEach(s => {
       const t = document.createElement('track'); t.kind = 'subtitles'; t.label = s.DisplayTitle || s.Language || 'Subtitles'; t.srclang = s.Language || '';
-      t.src = `/Videos/${film.id}/${src.Id}/Subtitles/${s.Index}/0/Stream.vtt?api_key=${ctx.session.token}`; t.dataset.index = s.Index; video.appendChild(t);
+      t.src = `/Videos/${film.id}/${src.Id}/Subtitles/${s.Index}/0/Stream.vtt?ApiKey=${ctx.session.token}`; t.dataset.index = s.Index; video.appendChild(t);
     });
     const subMenu = q('[data-menu="subs"]');
     subMenu.innerHTML = [`<button data-sub="-1" ${subIndex < 0 ? 'aria-pressed="true"' : ''}>Off</button>`]
