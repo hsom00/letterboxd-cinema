@@ -399,6 +399,10 @@ async function refreshSettings() {
   let d; try { d = await (await adminFetch('/api/admin/settings')).json(); } catch { return; }
   $('#s-name').value = d.name || ''; $('#s-lb').value = d.letterboxd_user || '';
   renderQueue(d.queue || []);
+  $('#s-linked').innerHTML = (d.linked || []).length ? d.linked.map(l => {
+    const u = encodeURIComponent(l.user), path = l.list === 'watchlist' ? 'watchlist/' : l.list.includes('/') ? '' : `list/${encodeURIComponent(l.list)}/`;
+    return `<li><span><a href="https://letterboxd.com/${u}/${path}" target="_blank" rel="noopener">${esc(l.user)}</a><span class="p">${esc(l.list === 'watchlist' ? 'Watchlist' : l.list.replace(/-/g, ' '))}</span></span>${l.enabled ? '' : '<span class="p">Paused</span>'}</li>`;
+  }).join('') : '<li class="s-empty">No Letterboxd account is linked yet.</li>';
   $('#s-sources').innerHTML = (d.sources || []).length ? d.sources.map(x => `<li><span>${esc(x.name)}<span class="p">${esc(x.privacy || '')}</span></span><button class="s-toggle" data-src="${x.id}" aria-pressed="${x.enabled}" title="${x.enabled ? 'On' : 'Off'}"></button></li>`).join('')
     : '<li class="s-empty">No sources yet.</li>';
   $('#s-add').innerHTML = '<option value="">Add a source…</option>' + (d.available || []).map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join('');

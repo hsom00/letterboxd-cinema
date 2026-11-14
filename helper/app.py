@@ -144,9 +144,23 @@ def remove_film(tmdb_id):
 PK = os.environ.get("PROWLARR_API_KEY", "")
 PROWLARR_URL = os.environ.get("PROWLARR_URL", "http://prowlarr:9696")
 
+def linked_letterboxd(lists):
+    """The Letterboxd accounts Radarr is really syncing, read from its import lists: one entry per username and list."""
+    seen = {}
+    for l in lists:
+        url = next((f.get("value") for f in l.get("fields", []) if f.get("name") == "url"), "") or ""
+        if "letterboxd-list:5000/" not in url: continue
+        parts = [p for p in url.split("letterboxd-list:5000/", 1)[1].split("/") if p]
+        if not parts: continue
+        user, rest = parts[0], parts[1:]
+        what = "watchlist" if rest == ["watchlist"] else rest[1] if len(rest) == 2 and rest[0] == "list" else "/".join(rest)
+        e = seen.setdefault((user.lower(), what), {"user": user, "list": what, "enabled": False})
+        e["enabled"] = e["enabled"] or bool(l.get("enabled") and l.get("enableAuto"))
+    return sorted(seen.values(), key=lambda e: (e["user"].lower(), e["list"] != "watchlist", e["list"]))
+
 def admin_state():
     st = settings(); RH = {"X-Api-Key": RADARR_KEY}; PH = {"X-Api-Key": PK}
-    out = {"name": app_name(), "letterboxd_user": st.get("letterboxd_user", ""), "sources": [], "available": [], "queue": [], "lists": []}
+    out = {"name": app_name(), "letterboxd_user": st.get("letterboxd_user", ""), "sources": [], "available": [], "queue": [], "lists": [], "linked": []}
     try:
         _, idx = provision.call("GET", f"{PROWLARR_URL}/api/v1/indexer", headers=PH)
         out["sources"] = [{"id": i["id"], "name": i.get("name"), "enabled": bool(i.get("enable")), "privacy": i.get("privacy"), "definition": i.get("definitionName")} for i in (idx if isinstance(idx, list) else [])]
@@ -162,6 +176,7 @@ def admin_state():
                                  "gb": round(size / 1e9, 1), "eta": r.get("timeleft"), "warning": next((m.get("title") for m in r.get("statusMessages", []) if m.get("title")), None)})
         _, lists = provision.call("GET", f"{RADARR_URL}/api/v3/importlist", headers=RH)
         out["lists"] = [{"id": l["id"], "name": l.get("name"), "url": next((f.get("value") for f in l.get("fields", []) if f.get("name") == "url"), "")} for l in (lists if isinstance(lists, list) else [])]
+        out["linked"] = linked_letterboxd(lists if isinstance(lists, list) else [])
     except Exception as e: out["queue_error"] = str(e)
     return out
 
